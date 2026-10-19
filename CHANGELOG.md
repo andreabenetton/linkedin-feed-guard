@@ -54,6 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the report keeps the popup's `version`, adds the page script's own as
   `contentVersion`, and marks a mismatch with the scope `stale`.
 
+- While the popup waits for the page, it says "Checking this page..." in the chosen
+  language instead of briefly asking you to open the feed.
+
 ### Removed
 
 - `SHA256SUMS`: each release carries the checksum of its own ZIP instead.

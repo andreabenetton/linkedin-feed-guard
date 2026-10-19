@@ -9,6 +9,8 @@
   let busy = false;
   let lastSettings = Config.normalize();
   let lastState = null, lastStatus = null, errorKey = null, copyKey = null;
+  // Until the first page answer (or its failure), the page is still being checked.
+  let checked = false;
   function error(key) { errorKey = key || null; renderError(); }
   function renderError() {
     byId('error').textContent = errorKey ? I18n.t(errorKey) : '';
@@ -48,9 +50,9 @@
     byId('rule-state').textContent = lastState ? I18n.t(lastState.trackingRuleActive ? 'ruleOn' : 'ruleOff') : '';
     const status = lastStatus;
     if (!status) {
-      byId('scope').textContent = I18n.t('noPage');
+      byId('scope').textContent = I18n.t(checked ? 'noPage' : 'checking');
       for (const key of ['posts', 'deferred', 'paused']) byId(key).textContent = '\u2014';
-      byId('hint').textContent = I18n.t('noPageHint');
+      byId('hint').textContent = checked ? I18n.t('noPageHint') : '';
     } else {
       const scopes = ['feed', 'unrecognized', 'waiting', 'outside-feed', 'disabled', 'error', 'stale'];
       byId('scope').textContent = I18n.t(scopes.includes(status.scope) ? status.scope : 'unknown');
@@ -83,6 +85,7 @@
       if (lastStatus.version !== Config.VERSION) lastStatus = {...lastStatus, scope: 'stale'};
       else if (lastStatus.scope === 'feed' && lastStatus.posts === 0) lastStatus = {...lastStatus, scope: 'unrecognized'};
     } catch { lastStatus = null; }
+    checked = true;
     render();
   }
   async function refresh(rescan = true) {
