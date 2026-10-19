@@ -40,6 +40,8 @@
   let wantFull = false;
   let lastFull = -Infinity;
   let fullTimer = null;
+  const RESIZE_SETTLE = 200;
+  let resizeTimer = null;
 
   function inFeed() {
     return location.protocol === 'https:' && location.hostname === 'www.linkedin.com' &&
@@ -400,14 +402,23 @@
       for (const [video, meta] of videos) maybePause(video, meta.near);
     }, true);
   }
+  function remeasure() {
+    resizeTimer = null;
+    if (orphaned() || !active()) return;
+    try {
+      // Cached heights may become stale after responsive reflow. Remeasure via IO.
+      for (const post of posts.keys()) {
+        clearDeferred(post);
+        const meta = posts.get(post); meta.near = true;
+        postObserver?.unobserve(post); postObserver?.observe(post);
+      }
+    } catch { failOpen(); }
+  }
   window.addEventListener('resize', () => {
     if (orphaned() || !active()) return;
-    // Cached heights may become stale after responsive reflow. Remeasure via IO.
-    for (const post of posts.keys()) {
-      clearDeferred(post);
-      const meta = posts.get(post); meta.near = true;
-      postObserver?.unobserve(post); postObserver?.observe(post);
-    }
+    // A window drag fires resize continuously; remeasure once it settles.
+    if (resizeTimer !== null) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(remeasure, RESIZE_SETTLE);
   }, {passive: true});
   function routeChanged() { if (!orphaned()) syncRoute(); }
   window.addEventListener('popstate', routeChanged);

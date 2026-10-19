@@ -63,6 +63,9 @@ STUB = r'''
  // Counts full root selections (Selectors.findRoot) by their one ROOTS query.
  const qsa=Document.prototype.querySelectorAll;T.rootScans=0;
  Document.prototype.querySelectorAll=function(selector){if(selector===ROOTS_SELECTOR)T.rootScans++;return qsa.call(this,selector);};
+ // Counts IntersectionObserver.unobserve calls: a resize remeasure unobserves every card.
+ const unobserve=IntersectionObserver.prototype.unobserve;T.unobserved=0;
+ IntersectionObserver.prototype.unobserve=function(target){T.unobserved++;return unobserve.call(this,target);};
  // What an invalidated extension context looks like to a content script.
  T.orphan = () => {delete chrome.runtime.id;};
  T.request = type => {let reply=null;for(const fn of messageListeners)fn({channel:'feed-guard-page',type},{id:'fixture-id'},value=>{reply=value;});return reply;};
@@ -274,6 +277,19 @@ with sync_playwright() as p:
             optimized=f.page.evaluate('document.documentElement.scrollHeight')
             assert abs(plain-optimized)<=3,(plain,optimized)
     case('Resize/reflow maintains fixture height after recomputing deferred-card placeholders',responsive)
+    def resize_debounce():
+        with Fixture(browser) as f:
+            assert f.page.locator('#post-39').get_attribute('data-llg-v1-defer')==''
+            f.evaluate('__FGTEST__.unobserved=0')
+            # Twenty resize events 20 ms apart, as a window drag produces.
+            f.page.evaluate('()=>new Promise(done=>{let n=0;const id=setInterval(()=>{window.dispatchEvent(new Event("resize"));if(++n===20){clearInterval(id);done();}},20)})')
+            assert f.evaluate('__FGTEST__.unobserved')==0
+            assert f.page.locator('#post-39').get_attribute('data-llg-v1-defer')==''
+            f.wait()
+            # One remeasure of the 40 cards once the events settle, then deferral again.
+            assert f.evaluate('__FGTEST__.unobserved')==40,f.evaluate('__FGTEST__.unobserved')
+            assert f.page.locator('#post-39').get_attribute('data-llg-v1-defer')==''
+    case('Resize events are debounced: one remeasure after the burst settles',resize_debounce)
     def lifecycle():
         with Fixture(browser) as f:
             f.page.evaluate('window.dispatchEvent(new PageTransitionEvent("pagehide",{persisted:true}))');f.wait()
