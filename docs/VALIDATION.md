@@ -16,12 +16,12 @@ logs and UI screenshots. Each release ZIP carries its own SHA-256 checksum.
 
 ## Test results
 
-**63 tests passed: 22 Node unit tests and 41 Chromium browser/UI fixture cases.**
+**71 tests passed: 24 Node unit tests and 47 Chromium browser/UI fixture cases.**
 No failing cases in the final run. See `test-results/unit.tap`,
 `test-results/browser.log` and `test-results/browser-results.json`.
 
-Screenshots of both popup languages and both help languages are included in
-`test-results/`. They show synthetic test data, not an authenticated account.
+Screenshots of both popup languages, both help languages and the diagnostics panel
+are included in `test-results/`. They show synthetic test data, not an authenticated account.
 
 `test-results/` is regenerated at each release by running the tests on the tagged
 tree; running the browser tests rewrites it in place. `browser-results.json`
@@ -75,9 +75,10 @@ warning in both languages.
 
 ## Browser and policy constraints
 
-The browser reports Chromium 144.0.7559.96. Managed policy includes
-`ExtensionInstallBlocklist: ["*"]` and `URLBlocklist: ["*"]`. These settings were
-not altered. The tests do not install the extension, navigate to LinkedIn, sign in,
+The recorded run used Google Chrome 148.0.7778.167, headless, driven by Playwright.
+An earlier run, on Chromium 144.0.7559.96, was under a managed policy with
+`ExtensionInstallBlocklist: ["*"]` and `URLBlocklist: ["*"]`, which was not
+altered. Either way the tests do not install the extension, navigate to LinkedIn, sign in,
 use the user's profile, or bypass browser policy. All fixture page requests are
 aborted. Synthetic media is embedded as a tiny data-URL video.
 

@@ -2,141 +2,153 @@ TAP version 13
 # Subtest: browser locale selects Italian region variants and falls back to English
 ok 1 - browser locale selects Italian region variants and falls back to English
   ---
-  duration_ms: 8.220344
+  duration_ms: 80.009988
   type: 'test'
   ...
 # Subtest: language override persists separately from optimization settings
 ok 2 - language override persists separately from optimization settings
   ---
-  duration_ms: 1.433993
+  duration_ms: 7.324217
   type: 'test'
   ...
 # Subtest: invalid language preference is normalized, not executed or fetched
 ok 3 - invalid language preference is normalized, not executed or fetched
   ---
-  duration_ms: 1.020538
+  duration_ms: 2.781586
   type: 'test'
   ...
 # Subtest: storage events update an open UI, while unrelated settings events do not change language
 ok 4 - storage events update an open UI, while unrelated settings events do not change language
   ---
-  duration_ms: 1.773768
+  duration_ms: 7.668111
   type: 'test'
   ...
 # Subtest: a failed language write preserves the active preference
 ok 5 - a failed language write preserves the active preference
   ---
-  duration_ms: 1.028019
+  duration_ms: 5.698499
   type: 'test'
   ...
 # Subtest: every HTML translation and ARIA key exists in both languages
 ok 6 - every HTML translation and ARIA key exists in both languages
   ---
-  duration_ms: 2.160403
+  duration_ms: 25.501505
   type: 'test'
   ...
 # Subtest: manifest locale catalogs are complete and satisfy all message references
 ok 7 - manifest locale catalogs are complete and satisfy all message references
   ---
-  duration_ms: 0.604379
+  duration_ms: 9.790193
   type: 'test'
   ...
 # Subtest: diagnostic export strips unknown fields, validates enums and clamps invalid numbers
 ok 8 - diagnostic export strips unknown fields, validates enums and clamps invalid numbers
   ---
-  duration_ms: 0.785098
+  duration_ms: 8.077064
+  type: 'test'
+  ...
+# Subtest: the version comes from the manifest alone and fills the help strings
+ok 9 - the version comes from the manifest alone and fills the help strings
+  ---
+  duration_ms: 32.168149
+  type: 'test'
+  ...
+# Subtest: diagnostics keep the page script version beside the popup version, or drop it
+ok 10 - diagnostics keep the page script version beside the popup version, or drop it
+  ---
+  duration_ms: 11.248126
   type: 'test'
   ...
 # Subtest: English and Italian translation catalogs have matching keys
-ok 9 - English and Italian translation catalogs have matching keys
+ok 11 - English and Italian translation catalogs have matching keys
   ---
-  duration_ms: 1.490276
+  duration_ms: 36.595765
   type: 'test'
   ...
 # Subtest: configuration is typed, whitelisted, copied and does not accept arbitrary fields
-ok 10 - configuration is typed, whitelisted, copied and does not accept arbitrary fields
+ok 12 - configuration is typed, whitelisted, copied and does not accept arbitrary fields
   ---
-  duration_ms: 3.221681
+  duration_ms: 19.127002
   type: 'test'
   ...
 # Subtest: defaults keep the experimental network rule off
-ok 11 - defaults keep the experimental network rule off
+ok 13 - defaults keep the experimental network rule off
   ---
-  duration_ms: 2.658654
+  duration_ms: 7.808637
   type: 'test'
   ...
 # Subtest: opt-in enables DNR; master disable removes it
-ok 12 - opt-in enables DNR; master disable removes it
+ok 14 - opt-in enables DNR; master disable removes it
   ---
-  duration_ms: 1.477077
+  duration_ms: 6.906485
   type: 'test'
   ...
 # Subtest: concurrent setting changes do not overwrite one another
-ok 13 - concurrent setting changes do not overwrite one another
+ok 15 - concurrent setting changes do not overwrite one another
   ---
-  duration_ms: 1.665677
+  duration_ms: 7.663867
   type: 'test'
   ...
 # Subtest: invalid settings cannot reach persistent storage or DNR
-ok 14 - invalid settings cannot reach persistent storage or DNR
+ok 16 - invalid settings cannot reach persistent storage or DNR
   ---
-  duration_ms: 1.399671
+  duration_ms: 11.8434
   type: 'test'
   ...
 # Subtest: messages from a page, content script or another extension are rejected
-ok 15 - messages from a page, content script or another extension are rejected
+ok 17 - messages from a page, content script or another extension are rejected
   ---
-  duration_ms: 1.621521
+  duration_ms: 6.121718
   type: 'test'
   ...
 # Subtest: DNR failure does not silently persist a successful opt-in
-ok 16 - DNR failure does not silently persist a successful opt-in
+ok 18 - DNR failure does not silently persist a successful opt-in
   ---
-  duration_ms: 1.061088
+  duration_ms: 6.416306
   type: 'test'
   ...
 # Subtest: storage failure rolls back previously changed browser rules
-ok 17 - storage failure rolls back previously changed browser rules
+ok 19 - storage failure rolls back previously changed browser rules
   ---
-  duration_ms: 0.67871
+  duration_ms: 5.607373
   type: 'test'
   ...
 # Subtest: update migration preserves user settings instead of resetting defaults
-ok 18 - update migration preserves user settings instead of resetting defaults
+ok 20 - update migration preserves user settings instead of resetting defaults
   ---
-  duration_ms: 1.31115
+  duration_ms: 9.260851
   type: 'test'
   ...
 # Subtest: startup reconciles persisted settings with packaged defaults
-ok 19 - startup reconciles persisted settings with packaged defaults
+ok 21 - startup reconciles persisted settings with packaged defaults
   ---
-  duration_ms: 1.307874
+  duration_ms: 13.643451
   type: 'test'
   ...
 # Subtest: local storage changes are reconciled by the worker
-ok 20 - local storage changes are reconciled by the worker
+ok 22 - local storage changes are reconciled by the worker
   ---
-  duration_ms: 1.671711
+  duration_ms: 30.322093
   type: 'test'
   ...
 # Subtest: rule pattern is anchored; does not match app, auth, publish or messages endpoints
-ok 21 - rule pattern is anchored; does not match app, auth, publish or messages endpoints
+ok 23 - rule pattern is anchored; does not match app, auth, publish or messages endpoints
   ---
-  duration_ms: 1.952033
+  duration_ms: 11.454615
   type: 'test'
   ...
 # Subtest: manifest is narrow, package references exist, and remote/update hooks are absent
-ok 22 - manifest is narrow, package references exist, and remote/update hooks are absent
+ok 24 - manifest is narrow, package references exist, and remote/update hooks are absent
   ---
-  duration_ms: 0.79373
+  duration_ms: 2.32901
   type: 'test'
   ...
-1..22
-# tests 22
+1..24
+# tests 24
 # suites 0
-# pass 22
+# pass 24
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 99.531737
+# duration_ms 940.678112

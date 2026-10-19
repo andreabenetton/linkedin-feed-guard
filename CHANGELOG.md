@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the evidence in `test-results/` can be tied to the code it describes.
 - The version shown in the popup, on the help page and in diagnostics is read from
   the extension's manifest, so it always matches the installed release.
+- The recorded diagnostics screenshot shows the diagnostics panel itself, and every
+  file in `test-results/` was regenerated from the current code.
 - Resizing the window re-measures the feed once, 200 ms after the resizing stops,
   instead of on every resize event.
 

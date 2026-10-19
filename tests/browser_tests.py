@@ -600,7 +600,9 @@ with sync_playwright() as p:
         page.select_option('#language','it');page.wait_for_timeout(100)
         assert 'nessun post' in page.locator('#scope').inner_text()
         assert page.locator('#copy').inner_text()=='Copia rapporto'
-        page.locator('body').screenshot(path=str(OUT/'popup-diagnostics.png'))
+        # The panel itself: it sits below the fold of the 600 px popup body.
+        page.locator('#report').evaluate('e=>{e.scrollTop=0}')
+        page.locator('#diagnostic-panel').screenshot(path=str(OUT/'popup-diagnostics.png'))
         page.click('#close-diagnostics')
         assert page.locator('#diagnostic-panel').is_hidden()
         assert page.input_value('#report')==''
