@@ -85,6 +85,7 @@
     updatePost(post);
   }
   const postObserver = supported ? new IntersectionObserver(entries => {
+    if (orphaned()) return;
     for (const entry of entries) {
       const meta = posts.get(entry.target);
       if (!meta) continue;
@@ -114,6 +115,7 @@
   }
   const videoObserver = typeof IntersectionObserver === 'function'
     ? new IntersectionObserver(entries => {
+      if (orphaned()) return;
       for (const entry of entries) {
         const meta = videos.get(entry.target);
         if (meta) { meta.near = entry.isIntersecting; maybePause(entry.target, meta.near); }
@@ -173,15 +175,32 @@
     for (const post of [...posts.keys()]) forgetPost(post);
     videos.clear(); main = null;
   }
-  function failOpen() {
+  function stop() {
     failed = true;
     clearManaged();
     domObserver.disconnect(); observing = false;
+  }
+  function failOpen() {
+    stop();
     // Constant diagnostic only. No content/URL is copied into error messages.
     console.warn('LinkedIn Feed Guard: local optimization stopped after an error. Reload the page.');
   }
+  // Disabling, removing or reloading the extension leaves this script running in
+  // open pages with an invalidated context: chrome.runtime.id becomes undefined and
+  // storage.onChanged never fires again, so the master switch can no longer reach
+  // it. Every entry point checks for that and tears down as failOpen does, silently
+  // (nothing went wrong in the page). A port to the worker would not do: MV3
+  // terminates an idle worker, which disconnects ports from a healthy extension too.
+  function orphaned() {
+    let id;
+    try { id = chrome.runtime?.id; } catch { id = undefined; }
+    if (id) return false;
+    if (!failed) stop();
+    return true;
+  }
   function flush() {
     timer = null;
+    if (orphaned()) return;
     try {
       if (!active()) { clearManaged(); return; }
       if (document.hidden) {
@@ -211,6 +230,7 @@
     rootDirty = true; needsScan = true; schedule();
   }
   const domObserver = new MutationObserver(records => {
+    if (orphaned()) return;
     if (!active()) { syncRoute(); return; }
     if (document.hidden) {
       needsScan = true;
@@ -312,7 +332,7 @@
     return false;
   });
   document.addEventListener('play', event => {
-    if (!active() || !(event.target instanceof HTMLVideoElement)) return;
+    if (orphaned() || !active() || !(event.target instanceof HTMLVideoElement)) return;
     try {
       if (!main) main = findMain();
       const post = topPost(event.target);
@@ -320,19 +340,22 @@
     } catch { failOpen(); }
   }, true);
   document.addEventListener('pause', event => {
+    if (orphaned()) return;
     const post = topPost(event.target);
     if (post) updatePost(post);
   }, true);
   document.addEventListener('focusin', event => {
+    if (orphaned()) return;
     const post = topPost(event.target);
     if (post) clearDeferred(post);
   }, true);
   document.addEventListener('focusout', event => {
+    if (orphaned()) return;
     const post = topPost(event.target);
     if (post) { dirtyPosts.add(post); schedule(); }
   }, true);
   document.addEventListener('visibilitychange', () => {
-    if (!active()) return;
+    if (orphaned() || !active()) return;
     if (document.hidden) {
       for (const [video, meta] of videos) maybePause(video, meta.near);
       clearWork(); needsScan = true; needsPrune = true;
@@ -340,13 +363,13 @@
   });
   for (const name of ['enterpictureinpicture', 'leavepictureinpicture', 'fullscreenchange']) {
     document.addEventListener(name, () => {
-      if (!active()) return;
+      if (orphaned() || !active()) return;
       for (const post of posts.keys()) updatePost(post);
       for (const [video, meta] of videos) maybePause(video, meta.near);
     }, true);
   }
   window.addEventListener('resize', () => {
-    if (!active()) return;
+    if (orphaned() || !active()) return;
     // Cached heights may become stale after responsive reflow. Remeasure via IO.
     for (const post of posts.keys()) {
       clearDeferred(post);
@@ -354,14 +377,15 @@
       postObserver?.unobserve(post); postObserver?.observe(post);
     }
   }, {passive: true});
-  window.addEventListener('popstate', syncRoute);
-  window.addEventListener('hashchange', syncRoute);
-  if (window.navigation) window.navigation.addEventListener('currententrychange', syncRoute);
+  function routeChanged() { if (!orphaned()) syncRoute(); }
+  window.addEventListener('popstate', routeChanged);
+  window.addEventListener('hashchange', routeChanged);
+  if (window.navigation) window.navigation.addEventListener('currententrychange', routeChanged);
   window.addEventListener('pagehide', () => {
     pageSuspended = true; domObserver.disconnect(); observing = false; clearManaged();
   });
   window.addEventListener('pageshow', event => {
-    if (event.persisted) { pageSuspended = false; void reloadSettings(); }
+    if (event.persisted && !orphaned()) { pageSuspended = false; void reloadSettings(); }
   });
   void reloadSettings();
 })();

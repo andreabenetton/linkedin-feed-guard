@@ -57,6 +57,10 @@ STUB = r'''
   const oldValue=stored;stored={...stored,...patch};
   for(const fn of changeListeners)fn({feedGuardSettingsV1:{oldValue,newValue:stored}},'local');
  };
+ // Counts the content script's console warnings without printing them.
+ T.warnings=0;console.warn=()=>{T.warnings++;};
+ // What an invalidated extension context looks like to a content script.
+ T.orphan = () => {delete chrome.runtime.id;};
  T.request = type => {let reply=null;for(const fn of messageListeners)fn({channel:'feed-guard-page',type},{id:'fixture-id'},value=>{reply=value;});return reply;};
  T.status = () => T.request('status');
  T.guardReads = () => {
@@ -296,6 +300,33 @@ with sync_playwright() as p:
             assert f.status()['posts']==0,f.status()
             assert f.status()['videos']==0
     case('Removed feed trees are released even while the simulated tab remains hidden',hidden_cleanup)
+    def orphaned():
+        # Through a DOM mutation (the observer flush) and through a scroll (IO callbacks).
+        for trigger in ['mutation','scroll']:
+            with Fixture(browser,content='<main>'+cards(video=39)+'</main>') as f:
+                assert f.page.locator('#post-39').get_attribute('data-llg-v1-defer')==''
+                f.evaluate('__FGTEST__.orphan()')
+                if trigger=='mutation':
+                    f.page.evaluate('document.querySelector("main").insertAdjacentHTML("beforeend","<div class=occludable-update id=late>Late</div>")')
+                else:
+                    f.page.locator('#post-20').scroll_into_view_if_needed()
+                f.wait()
+                assert f.page.locator('[data-llg-v1-post],[data-llg-v1-defer]').count()==0,trigger
+                assert f.page.locator('[style*="--llg-v1-block-size"]').count()==0,trigger
+                f.page.locator('#post-0').scroll_into_view_if_needed()
+                f.page.locator('#sample-video').evaluate('v=>v.play()');f.wait(250)
+                assert not f.page.locator('#sample-video').evaluate('v=>v.paused'),trigger
+                f.page.evaluate('document.querySelector("main").insertAdjacentHTML("beforeend","<div class=occludable-update>Later</div>")');f.wait()
+                assert f.page.locator('[data-llg-v1-post]').count()==0,trigger
+                assert f.page.locator('.occludable-update').count()>=40
+                assert f.evaluate('__FGTEST__.warnings')==0
+        # A media event alone is enough to notice it, too.
+        with Fixture(browser,content='<main>'+cards(video=39)+'</main>') as f:
+            f.evaluate('__FGTEST__.orphan()')
+            f.page.locator('#sample-video').evaluate('v=>v.play()');f.wait(250)
+            assert not f.page.locator('#sample-video').evaluate('v=>v.paused')
+            assert f.page.locator('[data-llg-v1-post],[data-llg-v1-defer]').count()==0
+    case('An invalidated extension context (disabled/removed/reloaded) stops the left-over script and clears its annotations',orphaned)
     def custom_property_restore():
         with Fixture(browser,settings={'enabled':False}) as f:
             f.page.locator('#post-39').evaluate('e=>e.style.setProperty("--llg-v1-block-size","123px","important")')

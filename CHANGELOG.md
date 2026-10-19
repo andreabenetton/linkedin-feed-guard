@@ -31,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Releases**: a `vX.Y.Z` tag publishes a GitHub release with a ZIP ready for
   *Load unpacked* and its SHA-256 checksum (`tools/package.py`).
 
+### Fixed
+
+- After the extension is disabled, removed or reloaded from the extensions page, the
+  copy left running in an open LinkedIn tab now notices, clears its rendering marks
+  and stops pausing videos, instead of carrying on until the tab is reloaded.
+
 ### Removed
 
 - `SHA256SUMS`: each release carries the checksum of its own ZIP instead.
