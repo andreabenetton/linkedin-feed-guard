@@ -1,0 +1,19 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * SPDX-FileCopyrightText: 2026 LinkedIn Feed Guard contributors */
+:root {color-scheme:light dark;}
+body {font:16px/1.65 system-ui,sans-serif; margin:0; background:#f6f7f9; color:#192330;}
+main {max-width:810px; margin:48px auto; padding:0 26px 64px;}
+h1 {font-size:38px; line-height:1.15; letter-spacing:-.025em; margin:16px 0 28px;}
+h2 {margin-top:36px; font-size:21px;}
+.eyebrow {letter-spacing:.06em; font-size:12px; font-weight:700; color:#126747;}
+code {font-size:13px; background:#e8ebef; padding:2px 4px; border-radius:3px; overflow-wrap:anywhere;}
+li {margin:7px 0;}
+@media (prefers-color-scheme:dark) {body {background:#151a20;color:#e1e8f0;} code {background:#2a343e;} .eyebrow {color:#91d3b6;}}
+
+.toolbar {display:flex; justify-content:space-between; align-items:center; gap:18px; flex-wrap:wrap;}
+.language {display:flex; align-items:center; gap:8px; font-size:13px;}
+select {font:inherit; padding:7px; border:1px solid #83928d; border-radius:5px;}
+select:focus-visible {outline:2px solid #126747; outline-offset:3px;}
+p {overflow-wrap:anywhere;}
+#language-error {color:#a83323;}
+[hidden] {display:none !important;}

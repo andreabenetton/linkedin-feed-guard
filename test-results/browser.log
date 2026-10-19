@@ -1,0 +1,42 @@
+PASS All posts/Promoted text retained, nested cards deduplicated, native network APIs unchanged
+PASS Only far-away cards receive actual content-visibility:auto; browser find can find their text
+PASS Textareas, rich editors and newly typed drafts remain intact and uncontained
+PASS Live option toggles and master switch restore attributes/CSS without a reload
+PASS Scrolling reactivates cards, preserves fixture document height and does not delete old posts
+PASS Large insertion bursts are handled; references to site-removed cards are released
+PASS Messaging pages do not receive feed DOM or media interventions
+PASS Simulated route/popstate changes restore and reapply without reinjection
+PASS Late-arriving main/feed containers are discovered
+PASS Replacing the main container releases old annotations and tracks only the new feed
+PASS Real visible video playback is allowed; source/autoplay/preload/volume stay unchanged
+PASS Real offscreen video playback is paused; live disable permits playback
+PASS Simulated hidden-tab state pauses real video and return does not autoplay
+PASS Simulated PiP/fullscreen state protects real video; leaving protected state reapplies policy
+PASS Fixture execution does not read text/input/cookies, request an external resource or expose isolated globals
+PASS Resize/reflow maintains fixture height after recomputing deferred-card placeholders
+PASS Simulated pagehide/BFCache pageshow cleans up and reinitializes
+PASS Interaction attribute changes remove containment before an editor is used
+PASS Repeated on/off cycles do not duplicate tracked cards or lose DOM nodes
+PASS Removed feed trees are released even while the simulated tab remains hidden
+PASS Pre-existing custom CSS property is restored, rather than overwriting unrelated page state
+PASS Modern mainFeed without a main element detects component-key post wrappers
+PASS An empty first main does not hide cards in a later main
+PASS Hidden main trees are excluded during root selection
+PASS A container with zero supported posts reports unrecognized, not success
+PASS List-item fallback requires the known mainFeed and a post-body marker
+PASS Nested legacy markers inside modern cards are not double-counted
+PASS A late mainFeed outside an empty main is discovered automatically
+PASS Adding or removing role during hydration updates detection without new nodes
+PASS Legacy class-marker hydration and removal also update the card registry
+PASS A mainFeed identity added later is detected without replacing the root
+PASS Replacing a modern feed with a legacy root releases all old card references
+PASS Modern cards preserve draft editors and cleanly remove optimization annotations
+PASS Explicit diagnostics use only fixed enums and counts without reading page text or values
+PASS Modern markers on an excluded route neither activate optimizations nor scan diagnostics
+PASS A generic list-item group containing several post cards is not treated as one post
+PASS English/Italian popup, live selector, persistence and narrow-layout screenshots
+PASS Help is fully translated in both languages and can switch without a reload
+PASS Zero-post UI, sanitized report, clipboard fallback, translation and report cleanup
+PASS Stored language overrides browser locale and storage changes refresh open UI
+PASS A stale content script triggers a localized reload warning rather than a success message
+{"passed": 41, "failed": 0, "browser": "144.0.7559.96"}
