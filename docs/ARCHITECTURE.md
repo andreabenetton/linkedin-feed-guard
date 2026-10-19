@@ -22,8 +22,12 @@ are deduplicated by outermost qualifying card. The generic list-item fallback is
 restricted to mainFeed and requires a post-body marker. Component-key values are
 matched by CSS, not read into strings or retained.
 
-`content.js` owns per-page maps of cards and video elements. MutationObserver
-batches insertions, removals and selected identity/interaction attribute changes.
+`content.js` owns per-page maps of cards and video elements. On the feed,
+MutationObserver batches insertions, removals and selected identity/interaction
+attribute changes; elsewhere it watches child lists only, to notice an in-page
+return to the feed. A change inside the feed root is handled around its target; a
+change that can affect root selection asks for a full root rescan, which runs at
+most once a second with a trailing run, so the last change is never lost.
 IntersectionObserver drives rendering and video behavior. There is no periodic
 polling loop or infinite-scroll truncation. Selector rescans are coalesced and can
 also be explicitly requested from the popup. Detached nodes are unobserved and

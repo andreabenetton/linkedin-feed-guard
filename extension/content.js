@@ -24,11 +24,22 @@
   let needsScan = false;
   let needsPrune = false;
   let pageSuspended = false;
-  let observing = false;
+  // null, 'route' (off the feed: child lists only, to notice an in-page route
+  // change) or 'feed' (child lists plus identity and interaction attributes).
+  let observing = null;
   let failed = false;
   let version = 0;
   let pausedCount = 0;
   let rootDirty = true;
+  // Root-level mutations ask for a full root rescan: findRoot reads computed style
+  // up every candidate root's ancestor chain, then every card is rediscovered.
+  // LinkedIn changes attributes above the feed continuously, so those rescans run
+  // at most once per FULL_INTERVAL; one arriving inside the interval is deferred,
+  // never dropped, so the last change always gets its rescan.
+  const FULL_INTERVAL = 1000;
+  let wantFull = false;
+  let lastFull = -Infinity;
+  let fullTimer = null;
 
   function inFeed() {
     return location.protocol === 'https:' && location.hostname === 'www.linkedin.com' &&
@@ -165,7 +176,8 @@
   }
   function clearWork() {
     if (timer !== null) clearTimeout(timer);
-    timer = null;
+    if (fullTimer !== null) clearTimeout(fullTimer);
+    timer = null; fullTimer = null; wantFull = false;
     addedRoots.clear(); dirtyPosts.clear();
     needsScan = false; needsPrune = false;
   }
@@ -178,7 +190,7 @@
   function stop() {
     failed = true;
     clearManaged();
-    domObserver.disconnect(); observing = false;
+    domObserver.disconnect(); observing = null;
   }
   function failOpen() {
     stop();
@@ -209,7 +221,13 @@
         if (needsPrune) prune();
         addedRoots.clear(); dirtyPosts.clear(); needsPrune = false; needsScan = true; return;
       }
-      const next = rootDirty || !main?.isConnected ? findMain() : main;
+      if (wantFull) {
+        const now = performance.now(), wait = lastFull + FULL_INTERVAL - now;
+        if (wait <= 0) { wantFull = false; lastFull = now; rootDirty = true; needsScan = true; needsPrune = true; }
+        else if (fullTimer === null) fullTimer = setTimeout(() => { fullTimer = null; schedule(); }, wait);
+      }
+      // With no root yet, only a requested rescan looks for one again.
+      const next = rootDirty || (main && !main.isConnected) ? findMain() : main;
       rootDirty = false;
       if (next !== main) {
         clearManaged(); main = next; needsScan = true;
@@ -225,13 +243,25 @@
   function schedule() {
     if (timer === null && !pageSuspended && !failed) timer = setTimeout(flush, 120);
   }
+  function observe() {
+    const mode = !settings.enabled || pageSuspended || failed ? null : inFeed() ? 'feed' : 'route';
+    if (mode === observing) return;
+    domObserver.disconnect(); observing = mode;
+    if (mode === 'feed') {
+      domObserver.observe(document.documentElement, {childList: true, subtree: true, attributes: true,
+        attributeFilter: [...Selectors.ATTRIBUTES, 'contenteditable', 'aria-expanded']});
+    } else if (mode === 'route') {
+      domObserver.observe(document.documentElement, {childList: true, subtree: true});
+    }
+  }
   function syncRoute() {
+    observe();
     if (!active()) { if (main || posts.size) clearManaged(); return; }
     rootDirty = true; needsScan = true; schedule();
   }
   const domObserver = new MutationObserver(records => {
     if (orphaned()) return;
-    if (!active()) { syncRoute(); return; }
+    if (!active() || observing !== 'feed') { syncRoute(); return; }
     if (document.hidden) {
       needsScan = true;
       if (records.some(record => record.removedNodes.length)) { needsPrune = true; schedule(); }
@@ -245,11 +275,17 @@
       if (record.removedNodes.length) needsPrune = true;
       const identity = record.type === 'attributes' && Selectors.ATTRIBUTES.includes(record.attributeName);
       if (identity) {
-        const target = record.target;
-        const relevant = target.matches(Selectors.ROOTS + ', ' + Selectors.CANDIDATES) ||
-          target === main || target.contains(main) || posts.has(target) ||
-          (main && main.contains(target) && record.attributeName !== 'class');
-        if (relevant) { rootDirty = true; needsScan = true; needsPrune = true; }
+        const target = record.target, inside = Boolean(main?.contains(target)) && target !== main;
+        if (target.matches(Selectors.ROOTS) || target === main || target.contains(main) ||
+            (!inside && target.matches(Selectors.CANDIDATES))) {
+          // May change which root is usable or best: a full, throttled rescan.
+          wantFull = true;
+        } else if (inside && (record.attributeName !== 'class' || posts.has(target) ||
+            target.matches(Selectors.CANDIDATES))) {
+          // Card identity inside the root: rediscover around the target and drop
+          // cards that stopped qualifying, without looking for a new root.
+          addedRoots.add(target); needsPrune = true;
+        }
       }
       for (const node of record.addedNodes) {
         if (!element(node)) continue;
@@ -257,7 +293,7 @@
         // A new mainFeed may arrive outside the initially selected empty main.
         if (node.matches(Selectors.ROOTS) || node.querySelector(Selectors.ROOTS) ||
             (posts.size === 0 && (node.matches(Selectors.CANDIDATES) || node.querySelector(Selectors.CANDIDATES)))) {
-          rootDirty = true; needsScan = true;
+          wantFull = true;
         }
       }
       if (addedRoots.size > 200 || dirtyPosts.size > 200) {
@@ -265,19 +301,15 @@
         break;
       }
     }
-    if (!main?.isConnected) { rootDirty = true; needsScan = true; }
-    if (needsScan || needsPrune || addedRoots.size || dirtyPosts.size) schedule();
+    if (!main) wantFull = true;
+    else if (!main.isConnected) { rootDirty = true; needsScan = true; }
+    if (wantFull || needsScan || needsPrune || addedRoots.size || dirtyPosts.size) schedule();
   });
 
   function configure(value) {
     settings = Config.normalize(value);
-    if (!settings.enabled) {
-      domObserver.disconnect(); observing = false; clearManaged(); return;
-    }
-    if (!observing && !pageSuspended && !failed) {
-      domObserver.observe(document.documentElement, {childList: true, subtree: true, attributes: true,
-        attributeFilter: [...Selectors.ATTRIBUTES, 'contenteditable', 'aria-expanded']}); observing = true;
-    }
+    observe();
+    if (!settings.enabled) { clearManaged(); return; }
     if (active()) {
       for (const post of posts.keys()) updatePost(post);
       for (const [video, meta] of videos) maybePause(video, meta.near);
@@ -382,7 +414,7 @@
   window.addEventListener('hashchange', routeChanged);
   if (window.navigation) window.navigation.addEventListener('currententrychange', routeChanged);
   window.addEventListener('pagehide', () => {
-    pageSuspended = true; domObserver.disconnect(); observing = false; clearManaged();
+    pageSuspended = true; observe(); clearManaged();
   });
   window.addEventListener('pageshow', event => {
     if (event.persisted && !orphaned()) { pageSuspended = false; void reloadSettings(); }

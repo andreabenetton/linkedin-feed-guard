@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   SPDX header; files that cannot, such as JSON and images, are covered by `REUSE.toml`.
   The help page names the new licence in both languages.
 
+- **Less background work on LinkedIn.** Outside the feed the extension now only
+  watches for elements being added or removed, to notice a return to the feed. On the
+  feed, bursts of changes LinkedIn makes around the feed cause at most one full rescan
+  per second, and the last change is always picked up.
+
 ### Added
 
 - **An icon** in the extensions page and on the toolbar: a shield over feed cards that

@@ -22,6 +22,7 @@ OUT.mkdir(exist_ok=True)
 KEY = 'feedGuardSettingsV1'
 SOURCE = '\n'.join((EXT / name).read_text() for name in ['config.js', 'selectors.js', 'content.js'])
 MEDIA = 'data:video/webm;base64,' + base64.b64encode((ROOT / 'tests/silent.webm').read_bytes()).decode()
+ROOTS_SELECTOR = '[data-testid="mainFeed"], main, [role="main"]'  # selectors.js ROOTS
 CSS = '''body{margin:0;background:white}main{width:600px;margin:0 20px}.occludable-update{box-sizing:border-box;min-height:200px;margin:12px 0;padding:15px;border:1px solid #aaa}video{width:160px;height:90px}textarea{width:250px;height:48px}.spacer{height:1500px}'''
 
 def cards(count=40, start=0, video=None, drafts=False):
@@ -59,6 +60,9 @@ STUB = r'''
  };
  // Counts the content script's console warnings without printing them.
  T.warnings=0;console.warn=()=>{T.warnings++;};
+ // Counts full root selections (Selectors.findRoot) by their one ROOTS query.
+ const qsa=Document.prototype.querySelectorAll;T.rootScans=0;
+ Document.prototype.querySelectorAll=function(selector){if(selector===ROOTS_SELECTOR)T.rootScans++;return qsa.call(this,selector);};
  // What an invalidated extension context looks like to a content script.
  T.orphan = () => {delete chrome.runtime.id;};
  T.request = type => {let reply=null;for(const fn of messageListeners)fn({channel:'feed-guard-page',type},{id:'fixture-id'},value=>{reply=value;});return reply;};
@@ -93,7 +97,7 @@ class Fixture:
         self.cdp=self.context.new_cdp_session(self.page)
         frame=self.cdp.send('Page.getFrameTree')['frameTree']['frame']['id']
         self.world=self.cdp.send('Page.createIsolatedWorld',{'frameId':frame,'worldName':'feed-guard-test'})['executionContextId']
-        self.evaluate(STUB.replace('INITIAL',json.dumps(settings or {})).replace('TEST_PATH',json.dumps(path)))
+        self.evaluate(STUB.replace('INITIAL',json.dumps(settings or {})).replace('TEST_PATH',json.dumps(path)).replace('ROOTS_SELECTOR',json.dumps(ROOTS_SELECTOR)))
         if guard_reads:self.evaluate('__FGTEST__.guardReads()')
         self.evaluate('(() => { const location = __FGTEST__.location;\n' + SOURCE + '\n})();')
         self.wait()
@@ -327,6 +331,34 @@ with sync_playwright() as p:
             assert not f.page.locator('#sample-video').evaluate('v=>v.paused')
             assert f.page.locator('[data-llg-v1-post],[data-llg-v1-defer]').count()==0
     case('An invalidated extension context (disabled/removed/reloaded) stops the left-over script and clears its annotations',orphaned)
+    # Main world: 150 attribute changes above the feed over 1.5 s, then hide the root.
+    BURST='''()=>new Promise(done=>{let n=0;const id=setInterval(()=>{
+      document.body.classList.toggle('burst');document.body.setAttribute('data-testid','burst-'+(n%7));
+      if(++n===150){clearInterval(id);document.querySelector('main').setAttribute('hidden','');done();}},10);})'''
+    def scan_storm():
+        with Fixture(browser) as f:
+            assert f.status()['posts']==40
+            f.evaluate('__FGTEST__.rootScans=0')
+            f.page.evaluate(BURST)
+            during=f.evaluate('__FGTEST__.rootScans')
+            # Unthrottled, every 120 ms batch reselected the root: about 12 here.
+            assert 1<=during<=3,during
+            f.wait(1300)
+            # The trailing rescan saw the last change: the hidden root is let go.
+            assert f.status()['scope']=='waiting',f.status()
+            assert f.page.locator('[data-llg-v1-post]').count()==0
+            assert f.evaluate('__FGTEST__.rootScans')<=during+1,f.evaluate('__FGTEST__.rootScans')
+        with Fixture(browser,path='/messaging/') as f:
+            f.evaluate('__FGTEST__.rootScans=0')
+            f.page.evaluate(BURST);f.wait()
+            assert f.evaluate('__FGTEST__.rootScans')==0
+            assert f.status()['scope']=='outside-feed'
+            # Off the feed the child-list observer still notices an in-page route change.
+            f.page.evaluate('document.querySelector("main").removeAttribute("hidden")')
+            f.evaluate('__FGTEST__.location.pathname="/feed/"')
+            f.page.evaluate('document.body.insertAdjacentHTML("beforeend","<div>route changed</div>")');f.wait()
+            assert f.status()['posts']==40,f.status()
+    case('A burst of attribute changes above the feed causes a bounded number of root rescans and none off the feed',scan_storm)
     def custom_property_restore():
         with Fixture(browser,settings={'enabled':False}) as f:
             f.page.locator('#post-39').evaluate('e=>e.style.setProperty("--llg-v1-block-size","123px","important")')
