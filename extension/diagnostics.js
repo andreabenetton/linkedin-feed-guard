@@ -5,6 +5,7 @@
   'use strict';
   const count = value => Number.isSafeInteger(value) && value >= 0 ? Math.min(value, 10000) : 0;
   const pick = (value, allowed, fallback) => allowed.includes(value) ? value : fallback;
+  const release = value => typeof value === 'string' && /^\d{1,5}\.\d{1,5}\.\d{1,5}$/.test(value);
   function sanitize(value) {
     const source = value && typeof value === 'object' ? value : {};
     const groups = {};
@@ -13,11 +14,14 @@
     for (const key of ['mainFeed', 'main', 'roleMain', 'occludable', 'sharedUpdate',
       'viewUpdate', 'componentKeyCards', 'listItems', 'expandableTextBoxes',
       'feedRoles', 'articleRoles', 'frames']) selectors[key] = count(source.selectors?.[key]);
-    return {
-      schema: 1, version: globalThis.LLGuardConfig.VERSION,
+    // `version` is this UI's; `contentVersion` is the page script's own, which
+    // differs when the tab still runs a script from before an update or reload.
+    const report = {schema: 1, version: globalThis.LLGuardConfig.VERSION};
+    if (release(source.version)) report.contentVersion = source.version;
+    return Object.assign(report, {
       pageCategory: pick(source.pageCategory, ['main-feed', 'other'], 'other'),
       scope: pick(source.scope, ['feed', 'unrecognized', 'waiting', 'outside-feed',
-        'disabled', 'error'], 'error'),
+        'disabled', 'error', 'stale'], 'error'),
       visibility: pick(source.visibility, ['visible', 'hidden'], 'hidden'),
       enabled: source.enabled === true, renderSupported: source.renderSupported === true,
       root: pick(source.root, ['none', 'mainFeed', 'main', 'role-main'], 'none'),
@@ -25,7 +29,7 @@
       videos: count(source.videos), paused: count(source.paused),
       variants: groups, selectors,
       errorCode: source.errorCode === 'local-optimization-stopped' ? 'local-optimization-stopped' : null,
-    };
+    });
   }
   globalThis.LLGuardDiagnostics = Object.freeze({sanitize});
 })();

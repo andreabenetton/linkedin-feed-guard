@@ -90,6 +90,14 @@ test('the version comes from the manifest alone and fills the help strings', asy
     assert.equal(fs.readFileSync(path.join(EXT,file),'utf8').includes(MANIFEST.version),false,file);
   }
 });
+test('diagnostics keep the page script version beside the popup version, or drop it', () => {
+  const sanitize=harness().context.LLGuardDiagnostics.sanitize;
+  const old=sanitize({version:'0.1.0',scope:'stale'});
+  assert.equal(old.version,MANIFEST.version);assert.equal(old.contentVersion,'0.1.0');assert.equal(old.scope,'stale');
+  for(const bad of ['PRIVATE','0.1','1.2.3-beta','v1.2.3',' 1.2.3',123,null,undefined,{}]){
+    assert.equal(Object.hasOwn(sanitize({version:bad}),'contentVersion'),false,String(bad));
+  }
+});
 test('English and Italian translation catalogs have matching keys', () => {
   const source=fs.readFileSync(path.join(EXT,'i18n.js'),'utf8');
   const encoded=source.slice(source.indexOf('const STRINGS = ')+16,source.indexOf(';\nconst KEY'));

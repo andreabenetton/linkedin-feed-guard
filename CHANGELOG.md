@@ -50,6 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A distant post that contains only a hidden form field is now deferred like any
   other; posts with a field you can see or type in are still left alone.
 
+- Diagnostics no longer hide a page still running an older copy of the extension:
+  the report keeps the popup's `version`, adds the page script's own as
+  `contentVersion`, and marks a mismatch with the scope `stale`.
+
 ### Removed
 
 - `SHA256SUMS`: each release carries the checksum of its own ZIP instead.

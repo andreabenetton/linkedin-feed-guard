@@ -518,7 +518,7 @@ with sync_playwright() as p:
             assert f.page.locator('#group').get_attribute('data-llg-v1-post') is None
     case('A generic list-item group containing several post cards is not treated as one post',modern_grouping)
 
-    def ui_page(kind='popup', lang='en-US', initial=None, status=None):
+    def ui_page(kind='popup', lang='en-US', initial=None, status=None, diag_version='WRONG UNTRUSTED VERSION'):
         import re
         context=browser.new_context(viewport={'width':440 if kind=='popup' else 1000,'height':1000})
         page=context.new_page();errors=[]
@@ -528,7 +528,7 @@ with sync_playwright() as p:
         html=re.sub(r'<script[^>]*src=[^>]*></script>','',html)
         html=re.sub(r'<link[^>]*>','',html)
         page.set_content(html);page.add_style_tag(content=(EXT/f'{kind}.css').read_text())
-        payload={'version':VERSION,'lang':lang,'stored':initial or {},'status':status or {'ok':True,'scope':'feed','supported':True,'posts':40,'deferred':28,'videos':1,'paused':2}}
+        payload={'version':VERSION,'diagVersion':diag_version,'lang':lang,'stored':initial or {},'status':status or {'ok':True,'scope':'feed','supported':True,'posts':40,'deferred':28,'videos':1,'paused':2}}
         page.evaluate(r'''(input)=>{
           const events=[];const store=input.stored;
           window.__uiStore=store;window.__uiEvents=events;window.__calls=[];
@@ -538,7 +538,7 @@ with sync_playwright() as p:
             runtime:{sendMessage:async(m)=>{__calls.push(m);return {ok:true,settings:{enabled:true,renderOffscreen:true,pauseOffscreenVideos:true,pauseHiddenVideos:true,blockTracking:false},trackingRuleActive:false};},getURL:s=>s,getManifest:()=>({version:input.version})},
             tabs:{query:async()=>[{id:1}],sendMessage:async(id,m)=>{
               __calls.push(m);
-              if(m.type==='diagnostics')return {ok:true,diagnostics:{schema:1,version:'WRONG UNTRUSTED VERSION',scope:'unrecognized',pageCategory:'main-feed',visibility:'visible',enabled:true,renderSupported:true,posts:0,root:'mainFeed',selectors:{mainFeed:1,listItems:6,unapproved:'PRIVATE'},url:'PRIVATE URL',html:'PRIVATE HTML'}};
+              if(m.type==='diagnostics')return {ok:true,diagnostics:{schema:1,version:input.diagVersion,scope:'unrecognized',pageCategory:'main-feed',visibility:'visible',enabled:true,renderSupported:true,posts:0,root:'mainFeed',selectors:{mainFeed:1,listItems:6,unapproved:'PRIVATE'},url:'PRIVATE URL',html:'PRIVATE HTML'}};
               return {version:input.version, ...input.status};
             },create:async()=>({})}
           };
@@ -590,6 +590,8 @@ with sync_playwright() as p:
         page.click('#diagnostics');page.wait_for_timeout(200)
         report=page.input_value('#report');data=json.loads(report)
         assert data['version']==VERSION
+        # An invalid page script version is dropped, and the report says stale.
+        assert 'contentVersion' not in data and data['scope']=='stale',data
         assert data['selectors']['mainFeed']==1
         for bad in ['PRIVATE','UNTRUSTED','url','html','unapproved']:assert bad not in report
         page.click('#copy');page.wait_for_timeout(100)
@@ -622,6 +624,16 @@ with sync_playwright() as p:
         assert not errors,errors
         context.close()
     case('A stale content script triggers a localized reload warning rather than a success message',stale_content)
+    def report_versions():
+        for page_version,scope in [(VERSION,'unrecognized'),('0.1.0','stale')]:
+            context,page,errors=ui_page(diag_version=page_version)
+            page.click('#diagnostics');page.wait_for_timeout(200)
+            data=json.loads(page.input_value('#report'))
+            assert data['version']==VERSION and data['contentVersion']==page_version,data
+            assert data['scope']==scope,data
+            assert not errors,errors
+            context.close()
+    case('Diagnostics report the page script version beside the popup version and mark a mismatch stale',report_versions)
     browser.close()
 
 report={'utc':datetime.now(timezone.utc).isoformat(),'browser':browser_version,

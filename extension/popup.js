@@ -119,6 +119,8 @@
     try {
       const response = await pageCall('diagnostics');
       const report = globalThis.LLGuardDiagnostics.sanitize(response.diagnostics);
+      // The status line's rule: a page script of another release is stale.
+      if (report.contentVersion !== report.version) report.scope = 'stale';
       byId('report').value = JSON.stringify(report, null, 2);
       byId('diagnostic-panel').hidden = false;
       await pageStatus();

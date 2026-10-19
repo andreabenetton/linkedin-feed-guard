@@ -60,9 +60,14 @@ the language does not rewrite the five optimization preferences.
 
 The report contains only these fields:
 
-- `schema`, `version`: the fixed schema and packaged release version.
+- `schema`, `version`: the fixed schema and the release version of the popup that
+  made the report.
+- `contentVersion`: the release version the page's content script reports, kept only
+  when it is MAJOR.MINOR.PATCH and omitted otherwise. It differs from `version` when
+  the tab still runs a script from before an update or reload.
 - `pageCategory`: `main-feed` or `other`; not the page URL.
-- `scope`: `feed`, `unrecognized`, `waiting`, `outside-feed`, `disabled`, `error`.
+- `scope`: `feed`, `unrecognized`, `waiting`, `outside-feed`, `disabled`, `error`,
+  or `stale`, which the popup sets when `contentVersion` is not `version`.
 - `visibility`, `enabled`, `renderSupported`: fixed enums/booleans.
 - `root`: `none`, `mainFeed`, `main`, or `role-main`.
 - `posts`, `deferred`, `videos`, `paused`: nonnegative aggregate counters.
