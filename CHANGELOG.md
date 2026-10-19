@@ -57,6 +57,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - While the popup waits for the page, it says "Checking this page..." in the chosen
   language instead of briefly asking you to open the feed.
 
+- The help page, in English and Italian, now lists what diagnostics actually contain:
+  whether Feed Guard is enabled and whether the browser supports deferred rendering,
+  rather than "options".
+
 ### Removed
 
 - `SHA256SUMS`: each release carries the checksum of its own ZIP instead.

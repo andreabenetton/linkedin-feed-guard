@@ -51,7 +51,10 @@ async function writeSettings(patch) {
   return state(next);
 }
 function trustedUI(sender) {
-  // A content script cannot change the configuration through this channel.
+  // This channel answers the extension's own pages only. It is not the only way
+  // in: chrome.storage.local is writable from every extension context, the content
+  // script included, which is why storage.onChanged below reconciles the ruleset
+  // after any settings change, and why every reader normalizes what it reads.
   return sender.id === chrome.runtime.id && !sender.tab &&
     typeof sender.url === 'string' &&
     sender.url.startsWith(chrome.runtime.getURL(''));
@@ -75,6 +78,7 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onStartup.addListener(() => {
   serial(reconcile).catch(error => console.error('Feed Guard: startup failed.', error));
 });
+// Any writer, not just writeSettings: the rule follows whatever is stored.
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && Object.hasOwn(changes, Config.STORAGE_KEY)) {
     serial(reconcile).catch(error => console.error('Feed Guard: rule update failed.', error));

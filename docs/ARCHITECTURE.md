@@ -10,10 +10,14 @@ dependencies. The runtime directory is `extension/`.
 ## Components
 
 `config.js` validates the five boolean preferences and reads the release version
-from the manifest, its only source. `background.js` serializes settings changes, reconciles the packaged DNR
-ruleset, and rolls back rules if a storage write fails. Only extension UI senders
-can use its settings-write message channel. Errors returned to the UI are fixed
-codes rather than arbitrary exception text.
+from the manifest, its only source. `background.js` serializes settings changes,
+reconciles the packaged DNR ruleset, and rolls back rules if a storage write fails.
+Its settings message channel answers only the extension's own pages, not content
+scripts or web pages. That channel is not the only writer: `chrome.storage.local`
+is writable from every extension context, the content script included, so the
+worker reconciles the ruleset after any change to the stored settings, whoever made
+it, and every reader normalizes what it reads. A web page has no access to it.
+Errors returned to the UI are fixed codes rather than arbitrary exception text.
 
 `selectors.js` keeps structural detection separate from rendering. Root selection
 prefers a populated explicit mainFeed over a page-wide main, a populated main over

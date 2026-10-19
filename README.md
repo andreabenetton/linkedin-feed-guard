@@ -136,7 +136,8 @@ LinkedIn can serve different layouts, and the selectors may need further changes
 - Local storage contains only five boolean settings and one language preference.
   No `storage.sync`, content archive, URL history, or diagnostic log is used.
 - Per-tab counters exist only in memory. Diagnostics are generated on request and
-  contain a version, fixed status values, and aggregate counts from fixed selectors.
+  contain the popup's and the page script's versions, fixed status values, the
+  enabled and rendering-support flags, and aggregate counts from fixed selectors.
   They exclude text, HTML, names, input values, attribute values, post/account IDs,
   titles, URLs, cookies, and browser fingerprint fields. Unknown report fields are
   stripped again in the popup before display/copy.
