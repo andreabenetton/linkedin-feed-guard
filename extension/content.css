@@ -1,0 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * SPDX-FileCopyrightText: 2026 LinkedIn Feed Guard contributors
+ * Inert until JS annotates a far-away, non-interactive feed card.
+ * No display:none, fixed heights, removal, global animations, or script hooks.
+ * 'auto' keeps content available for find-in-page and the accessibility tree.
+ */
+[data-llg-v1-defer]:not(:focus-within):not(:hover) {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto var(--llg-v1-block-size, 600px);
+}

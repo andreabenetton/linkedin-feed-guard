@@ -1,0 +1,31 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * SPDX-FileCopyrightText: 2026 LinkedIn Feed Guard contributors
+ * Fixed-schema diagnostic export; UI only. */
+(() => {
+  'use strict';
+  const count = value => Number.isSafeInteger(value) && value >= 0 ? Math.min(value, 10000) : 0;
+  const pick = (value, allowed, fallback) => allowed.includes(value) ? value : fallback;
+  function sanitize(value) {
+    const source = value && typeof value === 'object' ? value : {};
+    const groups = {};
+    for (const key of ['legacy', 'component-key', 'list-item']) groups[key] = count(source.variants?.[key]);
+    const selectors = {};
+    for (const key of ['mainFeed', 'main', 'roleMain', 'occludable', 'sharedUpdate',
+      'viewUpdate', 'componentKeyCards', 'listItems', 'expandableTextBoxes',
+      'feedRoles', 'articleRoles', 'frames']) selectors[key] = count(source.selectors?.[key]);
+    return {
+      schema: 1, version: globalThis.LLGuardConfig.VERSION,
+      pageCategory: pick(source.pageCategory, ['main-feed', 'other'], 'other'),
+      scope: pick(source.scope, ['feed', 'unrecognized', 'waiting', 'outside-feed',
+        'disabled', 'error'], 'error'),
+      visibility: pick(source.visibility, ['visible', 'hidden'], 'hidden'),
+      enabled: source.enabled === true, renderSupported: source.renderSupported === true,
+      root: pick(source.root, ['none', 'mainFeed', 'main', 'role-main'], 'none'),
+      posts: count(source.posts), deferred: count(source.deferred),
+      videos: count(source.videos), paused: count(source.paused),
+      variants: groups, selectors,
+      errorCode: source.errorCode === 'local-optimization-stopped' ? 'local-optimization-stopped' : null,
+    };
+  }
+  globalThis.LLGuardDiagnostics = Object.freeze({sanitize});
+})();

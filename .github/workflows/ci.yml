@@ -1,0 +1,86 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-FileCopyrightText: 2026 LinkedIn Feed Guard contributors
+
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Syntax, unit tests, licences, privacy and version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+
+      - name: Syntax of every JavaScript file (ADR-0002)
+        run: |
+          set -euo pipefail
+          git ls-files '*.js' '*.cjs' | while read -r f; do node --check "$f"; done
+
+      - name: Every JSON file parses
+        run: |
+          set -euo pipefail
+          git ls-files '*.json' | while read -r f; do python3 -m json.tool "$f" >/dev/null; done
+
+      - name: Unit tests
+        run: node --test tests/*.test.cjs
+
+      - name: No network code in the extension (ADR-0003)
+        run: |
+          set -euo pipefail
+          if grep -rnE 'fetch\(|XMLHttpRequest|sendBeacon|WebSocket|new Image\(|EventSource|importScripts\(.https?:' extension/; then
+            echo "::error::network code found in extension/ (ADR-0003)"; exit 1
+          fi
+
+      - name: Version strings agree (ADR-0014)
+        run: python3 tools/package.py --check
+
+      - name: The release package builds
+        run: python3 tools/package.py --out dist && cat dist/*.sha256
+
+      - name: REUSE compliance (ADR-0001)
+        uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0
+
+  browser:
+    name: Chromium fixtures (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Install Playwright and its Chromium
+        run: |
+          set -euo pipefail
+          python -m pip install -r tests/requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Browser fixture tests (ADR-0013)
+        run: |
+          set -euo pipefail
+          export CHROMIUM_BIN="$(python -c 'from playwright.sync_api import sync_playwright; p = sync_playwright().start(); print(p.chromium.executable_path); p.stop()')"
+          python tests/browser_tests.py
