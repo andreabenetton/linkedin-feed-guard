@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-19
+
 ### Changed
 
 - **Licensed GPL-3.0-only** (ADR-0001). Every source file carries an
@@ -82,5 +84,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Provide standalone English README, architecture and validation documentation.
 - Expand fixture coverage for modern layouts, hydration, diagnostics and languages.
 
-[Unreleased]: https://github.com/andreabenetton/linkedin-feed-guard/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/andreabenetton/linkedin-feed-guard/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/andreabenetton/linkedin-feed-guard/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/andreabenetton/linkedin-feed-guard/releases/tag/v0.2.0

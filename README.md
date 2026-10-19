@@ -4,7 +4,7 @@
 -->
 # LinkedIn Feed Guard
 
-**Version 0.2.0 - local beta for Brave and Chromium browsers. Licensed GPL-3.0-only.**
+**Version 0.3.0 - local beta for Brave and Chromium browsers. Licensed GPL-3.0-only.**
 
 Reduce unnecessary rendering and video playback in the LinkedIn home feed without
 removing posts, reloading pages, or suspending tabs. Not affiliated with LinkedIn.
@@ -18,35 +18,50 @@ fixtures, not in your authenticated LinkedIn session.
 
 ## Install
 
-No build tools, account, registration, or package manager are needed.
+No build tools, account, registration, or package manager are needed. It works in
+Brave, Chrome and other Chromium browsers.
 
-1. Download `linkedin-feed-guard-X.Y.Z.zip` from the
+1. **Download.** From the
    [latest release](https://github.com/andreabenetton/linkedin-feed-guard/releases/latest)
-   and check it against its `.sha256` file. Extract it into a permanent folder on the
-   machine or VM running Brave.
-2. Open `brave://extensions` (`chrome://extensions` in Chrome), enable **Developer
-   mode**, and choose **Load unpacked**.
-3. Select the extracted folder `linkedin-feed-guard-X.Y.Z`, the one containing
-   `manifest.json`. Do not select the ZIP. (From a clone of this repository, select
-   its `extension/` folder instead.)
-4. Save any open drafts, then manually reload your LinkedIn tabs.
-5. Open `https://www.linkedin.com/feed/`, wait for posts to appear, and open the
-   extension popup. Check the **posts detected** count.
+   download `linkedin-feed-guard-X.Y.Z.zip` and `linkedin-feed-guard-X.Y.Z.zip.sha256`.
+2. **Check the download** (optional, recommended). In the download folder, run
+   `sha256sum -c linkedin-feed-guard-X.Y.Z.zip.sha256`; it must print `OK`.
+   (macOS: `shasum -a 256 -c …`; Windows PowerShell: `Get-FileHash` and compare.)
+3. **Extract to a permanent place**, for example `~/extensions/`. The browser loads
+   the extension from this folder every time it starts: do not delete or move it
+   afterwards. You get one folder, `linkedin-feed-guard-X.Y.Z`, with `manifest.json`
+   directly inside it.
+4. **Load it.** Open `brave://extensions` (`chrome://extensions` in Chrome), switch on
+   **Developer mode** (top right), click **Load unpacked**, and select the
+   `linkedin-feed-guard-X.Y.Z` folder itself, not the ZIP and not a folder above it.
+   (From a clone of this repository, select its `extension/` folder instead.)
+5. **Pin it** (optional): click the puzzle-piece icon in the toolbar and pin
+   LinkedIn Feed Guard, so its popup is one click away.
+6. **Reload LinkedIn.** Save any drafts, then reload your open LinkedIn tabs: a tab
+   opened before the install does not have the extension yet.
+7. **Check it works.** Open `https://www.linkedin.com/feed/`, wait for posts, and open
+   the extension popup. **Posts detected** should be above zero. If it stays at zero,
+   see [When the post count is zero](#when-the-post-count-is-zero).
 
 Do not bypass browser security or organizational policies that prohibit local
 extensions. In Qubes OS, keep the extracted files in the same AppVM as Brave.
 
 ## Update an existing installation
 
-Keep the extension's existing folder path to preserve its local ID and settings.
-Copy the **contents** of this package's `extension/` folder into that folder,
-including new files and the `_locales/` directory. At `brave://extensions`, click
-**Reload** on LinkedIn Feed Guard and verify that its version is **0.2.0**.
+Keep the folder you loaded the first time: the browser ties the extension's ID and
+your settings to that path.
 
-**Save drafts and reload LinkedIn afterwards. Reloading the extension alone does
-not replace the script already running in an open page.** Do not run two copies
-of Feed Guard at once. Loading it from a different folder may create a separate
-extension with separate preferences.
+1. Download and extract the new release as in steps 1 to 3 above, somewhere else.
+2. Copy the **contents** of the new `linkedin-feed-guard-X.Y.Z` folder over the
+   contents of your existing folder, replacing every file, `_locales/` and
+   `icons/` included. (From a clone, copy the contents of `extension/`.)
+3. At `brave://extensions`, click **Reload** on LinkedIn Feed Guard and check the
+   version it shows is the new one.
+4. Save drafts and reload your LinkedIn tabs. **Reloading the extension alone does
+   not replace the script already running in an open page.**
+
+Do not run two copies of Feed Guard at once. Loading the new folder as a second
+extension instead creates a separate extension with separate settings; remove one.
 
 ## Language
 

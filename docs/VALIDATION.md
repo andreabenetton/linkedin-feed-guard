@@ -2,7 +2,7 @@
   SPDX-License-Identifier: GPL-3.0-only
   SPDX-FileCopyrightText: 2026 LinkedIn Feed Guard contributors
 -->
-# Validation - LinkedIn Feed Guard 0.2.0
+# Validation - LinkedIn Feed Guard 0.3.0
 
 ## Scope
 
@@ -10,6 +10,12 @@ This is a local beta, distributed as unpacked source. It has not been installed
 in an authenticated LinkedIn session in the laboratory. The user's exact live
 DOM was not provided. Broader structural matching addresses known detection gaps,
 but successful detection on the user's specific account remains to be confirmed.
+
+Field report: the project owner installed 0.2.0 unpacked in their own browser and
+reported it working on their LinkedIn feed (2026-10-19). That is a report of use,
+not a measurement: no counts, memory or CPU figures were recorded with it. 0.3.0
+changes the code it ran (the review fixes in `CHANGELOG.md`) and is covered by the
+fixture results below.
 
 The package includes the exact source, synthetic fixtures, test commands, result
 logs and UI screenshots. Each release ZIP carries its own SHA-256 checksum.
@@ -95,7 +101,7 @@ or that every LinkedIn layout is supported.
 ## Manual acceptance check
 
 1. Replace the files in the existing extension directory. Reload the extension,
-   verify version 0.2.0, save drafts, and reload LinkedIn.
+   verify version 0.3.0, save drafts, and reload LinkedIn.
 2. Open the main home feed. Confirm a positive post count and inspect the detected
    root/variant counts in Diagnostics. If zero remains, share only the local report
    after reviewing it; do not assume optimization is active.
