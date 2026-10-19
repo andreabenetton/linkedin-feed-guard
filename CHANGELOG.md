@@ -45,6 +45,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   copy left running in an open LinkedIn tab now notices, clears its rendering marks
   and stops pausing videos, instead of carrying on until the tab is reloaded.
 
+- A distant post that contains only a hidden form field is now deferred like any
+  other; posts with a field you can see or type in are still left alone.
+
 ### Removed
 
 - `SHA256SUMS`: each release carries the checksum of its own ZIP instead.

@@ -7,7 +7,9 @@
   'use strict';
   const Config = globalThis.LLGuardConfig;
   const Selectors = globalThis.LLGuardSelectors;
-  const SENSITIVE_SELECTOR = 'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="dialog"], [role="menu"], [aria-expanded="true"]';
+  // A hidden input is never rendered, focused or edited: form plumbing, not a
+  // draft. Every other input type can hold or receive something the user does.
+  const SENSITIVE_SELECTOR = 'input:not([type="hidden" i]), textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="dialog"], [role="menu"], [aria-expanded="true"]';
   const POST_ATTR = 'data-llg-v1-post';
   const DEFER_ATTR = 'data-llg-v1-defer';
   const SIZE_PROP = '--llg-v1-block-size';

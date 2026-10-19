@@ -166,6 +166,17 @@ with sync_playwright() as p:
             assert f.page.input_value('#draft-0')=='NEW UNSAVED DRAFT'
             assert f.page.locator('#rich-draft').inner_text()=='DRAFT EDITOR'
     case('Textareas, rich editors and newly typed drafts remain intact and uncontained',draft_safety)
+    def hidden_input():
+        html=cards()
+        html=html.replace('Synthetic body 39.</p>','Synthetic body 39.</p><input type="hidden" name="token" value="x">',1)
+        html=html.replace('Synthetic body 38.</p>','Synthetic body 38.</p><input type="text" id="text-38">',1)
+        html=html.replace('Synthetic body 37.</p>','Synthetic body 37.</p><input type="HIDDEN" name="token2" value="y"><input type="checkbox">',1)
+        with Fixture(browser,content='<main>'+html+'</main>') as f:
+            assert f.page.locator('#post-39').get_attribute('data-llg-v1-defer')==''
+            assert f.page.locator('#post-38').get_attribute('data-llg-v1-defer') is None
+            assert f.page.locator('#post-37').get_attribute('data-llg-v1-defer') is None
+            assert f.page.locator('#post-36').get_attribute('data-llg-v1-defer')==''
+    case('A card whose only input is hidden is still deferred; a visible input still excludes it',hidden_input)
     def live_toggle():
         with Fixture(browser) as f:
             f.patch(renderOffscreen=False)
