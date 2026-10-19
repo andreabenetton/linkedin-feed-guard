@@ -54,7 +54,7 @@ breaking the site the extension runs on, and for code a reviewer can read as it 
 
 ```bash
 node --test tests/*.test.cjs                 # unit tests (Node 20+)
-python3 tools/package.py --check             # version strings agree
+python3 tools/package.py --check             # manifest version and version_name agree
 python3 tools/package.py --out dist          # the Load-unpacked ZIP and its .sha256
 reuse lint                                   # licence compliance
 # browser fixtures: see README "Test and inspect"
@@ -63,8 +63,8 @@ reuse lint                                   # licence compliance
 ## Releasing (ADR-0014)
 
 1. Move `[Unreleased]` in `CHANGELOG.md` to `[X.Y.Z] - YYYY-MM-DD`; update the links.
-2. Set X.Y.Z in `extension/manifest.json` (`version`, `version_name`),
-   `extension/config.js` (`VERSION`), `popup.html`, `help.html` and the help strings
-   in `i18n.js`; `python3 tools/package.py --check` passes.
+2. Set X.Y.Z in `extension/manifest.json` (`version`, `version_name`), the only
+   place it is written: the popup, help, help strings and `config.js` read it at run
+   time; `python3 tools/package.py --check` passes.
 3. Commit, tag `vX.Y.Z`, push the tag. `release.yml` checks the tag, runs the tests
    and publishes the ZIP and its checksum as a GitHub release.

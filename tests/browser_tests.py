@@ -21,6 +21,7 @@ EXT = ROOT / 'extension'
 OUT = ROOT / 'test-results'
 OUT.mkdir(exist_ok=True)
 KEY = 'feedGuardSettingsV1'
+VERSION = json.loads((EXT / 'manifest.json').read_text())['version']
 EXTENSION_HASH_METHOD = ("sha256 of a sha256sum listing of every file under extension/, paths relative "
     "to it and sorted bytewise; from the repository root: cd extension && find . -type f -printf '%P\\n' "
     "| LC_ALL=C sort | xargs sha256sum | sha256sum")
@@ -65,7 +66,7 @@ STUB = r'''
  Object.defineProperty(document,'fullscreenElement',{configurable:true,get:()=>T.fullscreen?document.getElementById(T.fullscreen):null});
  globalThis.chrome = {
   storage:{local:{get:async()=>({feedGuardSettingsV1:stored})}, onChanged:{addListener:fn=>changeListeners.push(fn)}},
-  runtime:{id:'fixture-id',onMessage:{addListener:fn=>messageListeners.push(fn)}}
+  runtime:{id:'fixture-id',getManifest:()=>({version:MANIFEST_VERSION}),onMessage:{addListener:fn=>messageListeners.push(fn)}}
  };
  T.patch = patch => {
   const oldValue=stored;stored={...stored,...patch};
@@ -113,7 +114,7 @@ class Fixture:
         self.cdp=self.context.new_cdp_session(self.page)
         frame=self.cdp.send('Page.getFrameTree')['frameTree']['frame']['id']
         self.world=self.cdp.send('Page.createIsolatedWorld',{'frameId':frame,'worldName':'feed-guard-test'})['executionContextId']
-        self.evaluate(STUB.replace('INITIAL',json.dumps(settings or {})).replace('TEST_PATH',json.dumps(path)).replace('ROOTS_SELECTOR',json.dumps(ROOTS_SELECTOR)))
+        self.evaluate(STUB.replace('INITIAL',json.dumps(settings or {})).replace('TEST_PATH',json.dumps(path)).replace('ROOTS_SELECTOR',json.dumps(ROOTS_SELECTOR)).replace('MANIFEST_VERSION',json.dumps(VERSION)))
         if guard_reads:self.evaluate('__FGTEST__.guardReads()')
         self.evaluate('(() => { const location = __FGTEST__.location;\n' + SOURCE + '\n})();')
         self.wait()
@@ -496,7 +497,7 @@ with sync_playwright() as p:
         html='<div data-testid="mainFeed">'+modern_cards(5)+'</div>'
         with Fixture(browser,content=html,guard_reads=True) as f:
             data=f.evaluate('__FGTEST__.request("diagnostics")')['diagnostics']
-            assert data['version']=='0.2.0'
+            assert data['version']==VERSION
             assert data['posts']==5 and data['selectors']['componentKeyCards']==5,data
             assert data['pageCategory']=='main-feed'
             encoded=json.dumps(data)
@@ -527,22 +528,22 @@ with sync_playwright() as p:
         html=re.sub(r'<script[^>]*src=[^>]*></script>','',html)
         html=re.sub(r'<link[^>]*>','',html)
         page.set_content(html);page.add_style_tag(content=(EXT/f'{kind}.css').read_text())
-        payload={'lang':lang,'stored':initial or {},'status':status or {'ok':True,'scope':'feed','supported':True,'posts':40,'deferred':28,'videos':1,'paused':2}}
+        payload={'version':VERSION,'lang':lang,'stored':initial or {},'status':status or {'ok':True,'scope':'feed','supported':True,'posts':40,'deferred':28,'videos':1,'paused':2}}
         page.evaluate(r'''(input)=>{
           const events=[];const store=input.stored;
           window.__uiStore=store;window.__uiEvents=events;window.__calls=[];
           window.chrome={
             i18n:{getUILanguage:()=>input.lang},
             storage:{local:{get:async(key)=>({[key]:store[key]}),set:async(values)=>{Object.assign(store,values);for(const [key,value] of Object.entries(values))for(const cb of events)cb({[key]:{newValue:value}},'local');}},onChanged:{addListener:cb=>events.push(cb)}},
-            runtime:{sendMessage:async(m)=>{__calls.push(m);return {ok:true,settings:{enabled:true,renderOffscreen:true,pauseOffscreenVideos:true,pauseHiddenVideos:true,blockTracking:false},trackingRuleActive:false};},getURL:s=>s},
+            runtime:{sendMessage:async(m)=>{__calls.push(m);return {ok:true,settings:{enabled:true,renderOffscreen:true,pauseOffscreenVideos:true,pauseHiddenVideos:true,blockTracking:false},trackingRuleActive:false};},getURL:s=>s,getManifest:()=>({version:input.version})},
             tabs:{query:async()=>[{id:1}],sendMessage:async(id,m)=>{
               __calls.push(m);
               if(m.type==='diagnostics')return {ok:true,diagnostics:{schema:1,version:'WRONG UNTRUSTED VERSION',scope:'unrecognized',pageCategory:'main-feed',visibility:'visible',enabled:true,renderSupported:true,posts:0,root:'mainFeed',selectors:{mainFeed:1,listItems:6,unapproved:'PRIVATE'},url:'PRIVATE URL',html:'PRIVATE HTML'}};
-              return {version:'0.2.0', ...input.status};
+              return {version:input.version, ...input.status};
             },create:async()=>({})}
           };
         }''',payload)
-        scripts=['config.js','i18n.js','diagnostics.js','popup.js'] if kind=='popup' else ['i18n.js','help.js']
+        scripts=['config.js','i18n.js','diagnostics.js','popup.js'] if kind=='popup' else ['config.js','i18n.js','help.js']
         for script in scripts:page.add_script_tag(content=(EXT/script).read_text())
         page.wait_for_timeout(400)
         return context,page,errors
@@ -555,6 +556,7 @@ with sync_playwright() as p:
             assert page.locator('#error').is_hidden()
             assert page.locator('html').get_attribute('lang')==locale[:2]
             assert page.locator('#scope').inner_text()==('Posts detected' if locale.startswith('en') else 'Post riconosciuti')
+            assert page.locator('.eyebrow').inner_text().endswith(f'{VERSION} BETA'),page.locator('.eyebrow').inner_text()
             assert page.locator('body').evaluate('e=>e.getBoundingClientRect().height')<=600
             assert page.evaluate('document.documentElement.scrollWidth')<=440
             page.locator('body').screenshot(path=str(OUT/f'popup-{locale[:2]}.png'))
@@ -570,6 +572,9 @@ with sync_playwright() as p:
             context,page,errors=ui_page(kind='help',lang=locale)
             assert page.locator('html').get_attribute('lang')==locale[:2]
             assert page.locator('h1').inner_text().startswith('Keep' if locale.startswith('en') else 'Mantieni')
+            assert page.locator('.eyebrow').inner_text().endswith(f'{VERSION} BETA')
+            intro=page.locator('[data-i18n=helpIntro]').inner_text()
+            assert f'LinkedIn Feed Guard {VERSION} ' in intro and '{version}' not in intro,intro
             page.screenshot(path=str(OUT/f'help-{locale[:2]}.png'),full_page=True)
             target='it' if locale.startswith('en') else 'en'
             page.select_option('#language',target);page.wait_for_timeout(100)
@@ -584,7 +589,7 @@ with sync_playwright() as p:
         assert 'Diagnostics' in page.locator('#hint').inner_text()
         page.click('#diagnostics');page.wait_for_timeout(200)
         report=page.input_value('#report');data=json.loads(report)
-        assert data['version']=='0.2.0'
+        assert data['version']==VERSION
         assert data['selectors']['mainFeed']==1
         for bad in ['PRIVATE','UNTRUSTED','url','html','unapproved']:assert bad not in report
         page.click('#copy');page.wait_for_timeout(100)

@@ -9,8 +9,8 @@ dependencies. The runtime directory is `extension/`.
 
 ## Components
 
-`config.js` validates the five boolean preferences and declares the release
-version. `background.js` serializes settings changes, reconciles the packaged DNR
+`config.js` validates the five boolean preferences and reads the release version
+from the manifest, its only source. `background.js` serializes settings changes, reconciles the packaged DNR
 ruleset, and rolls back rules if a storage write fails. Only extension UI senders
 can use its settings-write message channel. Errors returned to the UI are fixed
 codes rather than arbitrary exception text.

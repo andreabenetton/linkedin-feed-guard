@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per second, and the last change is always picked up.
 - The browser test results record a SHA-256 of the extension files they tested, so
   the evidence in `test-results/` can be tied to the code it describes.
+- The version shown in the popup, on the help page and in diagnostics is read from
+  the extension's manifest, so it always matches the installed release.
 - Resizing the window re-measures the feed once, 200 ms after the resizing stops,
   instead of on every resize event.
 

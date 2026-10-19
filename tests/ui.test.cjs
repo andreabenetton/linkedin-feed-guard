@@ -7,12 +7,14 @@ const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
 const EXT = path.resolve(__dirname, '../extension');
+const MANIFEST = JSON.parse(fs.readFileSync(path.join(EXT, 'manifest.json'), 'utf8'));
 function harness(language = 'en-US', preference) {
   const listeners = [], storage = {feedGuardLanguageV1: preference};
   const document = {documentElement: {lang: ''}, querySelectorAll: () => [], getElementById: () => null};
   let fail = false;
   const context = vm.createContext({document, navigator: {language}, chrome: {
     i18n: {getUILanguage: () => language},
+    runtime: {getManifest: () => structuredClone(MANIFEST)},
     storage: {onChanged: {addListener: fn => listeners.push(fn)}, local: {
       async get(key) { return {[key]: storage[key]}; },
       async set(values) { if (fail) throw Error('write failure'); Object.assign(storage, values); }
@@ -70,10 +72,23 @@ test('diagnostic export strips unknown fields, validates enums and clamps invali
     url:'PRIVATE',html:'PRIVATE',version:'PRIVATE',scope:'PRIVATE',root:'PRIVATE',
     posts:NaN,deferred:-2,paused:20000,selectors:{mainFeed:1,private:'PRIVATE'},variants:{legacy:2,private:'PRIVATE'},errorCode:'PRIVATE'
   });
-  assert.equal(clean.version,'0.2.0');assert.equal(clean.scope,'error');assert.equal(clean.root,'none');
+  assert.equal(clean.version,MANIFEST.version);assert.equal(clean.scope,'error');assert.equal(clean.root,'none');
   assert.equal(clean.posts,0);assert.equal(clean.deferred,0);assert.equal(clean.paused,10000);
   assert.equal(JSON.stringify(clean).includes('PRIVATE'),false);
   assert.equal(clean.errorCode,null);
+});
+test('the version comes from the manifest alone and fills the help strings', async () => {
+  const h=harness('en-US');assert.equal(h.context.LLGuardConfig.VERSION,MANIFEST.version);
+  for(const locale of ['en','it']){
+    const i=harness(locale).context.LLGuardI18n;await i.init();
+    assert.ok(i.t('helpIntro').includes(`LinkedIn Feed Guard ${MANIFEST.version} `),locale);
+    assert.equal(i.t('helpIntro').includes('{version}'),false);
+  }
+  const bare=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(EXT,'config.js'),'utf8'),bare);
+  assert.equal(bare.LLGuardConfig.VERSION,'0.0.0');
+  for(const file of ['config.js','i18n.js','popup.html','help.html']){
+    assert.equal(fs.readFileSync(path.join(EXT,file),'utf8').includes(MANIFEST.version),false,file);
+  }
 });
 test('English and Italian translation catalogs have matching keys', () => {
   const source=fs.readFileSync(path.join(EXT,'i18n.js'),'utf8');

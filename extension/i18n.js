@@ -60,7 +60,7 @@ const STRINGS = {
     "close": "Close",
     "foot": "Local preferences only. No telemetry.",
     "helpTitle": "Keep the feed intact. Reduce unnecessary work.",
-    "helpIntro": "LinkedIn Feed Guard 0.2.0 is a local beta for Brave and Chromium browsers. It does not delete posts, reload pages or suspend tabs. It is not affiliated with LinkedIn.",
+    "helpIntro": "LinkedIn Feed Guard {version} is a local beta for Brave and Chromium browsers. It does not delete posts, reload pages or suspend tabs. It is not affiliated with LinkedIn.",
     "helpInstallTitle": "Install or update",
     "helpInstall": "Extract the package to a permanent folder. Open brave://extensions (chrome://extensions in Chrome), enable Developer mode, and load the extension folder that contains manifest.json. To update in place, replace files in your existing extension folder and click Reload. Save drafts and reload LinkedIn tabs afterwards. Do not run two copies together.",
     "helpLanguageTitle": "English and Italian",
@@ -145,7 +145,7 @@ const STRINGS = {
     "close": "Chiudi",
     "foot": "Solo preferenze locali. Nessuna telemetria.",
     "helpTitle": "Mantieni intatto il feed. Riduci il lavoro superfluo.",
-    "helpIntro": "LinkedIn Feed Guard 0.2.0 \u00e8 una beta locale per Brave e browser Chromium. Non cancella post, non ricarica pagine e non sospende schede. Non \u00e8 affiliata a LinkedIn.",
+    "helpIntro": "LinkedIn Feed Guard {version} \u00e8 una beta locale per Brave e browser Chromium. Non cancella post, non ricarica pagine e non sospende schede. Non \u00e8 affiliata a LinkedIn.",
     "helpInstallTitle": "Installazione e aggiornamento",
     "helpInstall": "Estrai il pacchetto in una cartella permanente. Apri brave://extensions (chrome://extensions in Chrome), attiva Modalit\u00e0 sviluppatore e carica la cartella extension contenente manifest.json. Per aggiornare, sostituisci i file nella cartella gi\u00e0 utilizzata e premi Ricarica. Salva le bozze e ricarica poi le schede LinkedIn. Non usare due copie insieme.",
     "helpLanguageTitle": "Italiano e inglese",
@@ -184,9 +184,14 @@ function locale() {
   const browser = globalThis.chrome?.i18n?.getUILanguage?.() || navigator.language || 'en';
   return /^it(?:[-_]|$)/i.test(browser) ? 'it' : 'en';
 }
-function t(key) { return STRINGS[locale()][key] ?? STRINGS.en[key] ?? key; }
+// From manifest.json through config.js, so no string carries a version to bump.
+const version = () => globalThis.LLGuardConfig?.VERSION ?? '';
+function t(key) {
+  return (STRINGS[locale()][key] ?? STRINGS.en[key] ?? key).replaceAll('{version}', version());
+}
 function render() {
   document.documentElement.lang = locale();
+  for (const node of document.querySelectorAll('[data-version]')) node.textContent = version();
   for (const node of document.querySelectorAll('[data-i18n]')) node.textContent = t(node.dataset.i18n);
   for (const node of document.querySelectorAll('[data-i18n-aria]')) node.setAttribute('aria-label', t(node.dataset.i18nAria));
   const select = document.getElementById('language');

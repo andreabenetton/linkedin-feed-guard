@@ -32,9 +32,19 @@
     }
     return patch;
   }
+  // manifest.json is the one place a release writes the version (ADR-0014).
+  // Every extension context (content script, pages, worker) can read it; the
+  // fallback serves only the Node vm unit tests, which supply no runtime.
+  function manifestVersion() {
+    try {
+      const value = globalThis.chrome?.runtime?.getManifest?.()?.version;
+      if (typeof value === 'string') return value;
+    } catch { /* No extension runtime: use the fallback. */ }
+    return '0.0.0';
+  }
   globalThis.LLGuardConfig = Object.freeze({
     DEFAULTS, KEYS, normalize, validatePatch,
-    VERSION: '0.2.0',
+    VERSION: manifestVersion(),
     STORAGE_KEY: 'feedGuardSettingsV1',
     RULESET: 'optional_tracking',
   });
