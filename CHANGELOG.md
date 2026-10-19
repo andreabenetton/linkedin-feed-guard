@@ -17,12 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Licensed GPL-3.0-only** (ADR-0001). Every source file carries an
   SPDX header; files that cannot, such as JSON and images, are covered by `REUSE.toml`.
   The help page names the new licence in both languages.
-
 - **Less background work on LinkedIn.** Outside the feed the extension now only
   watches for elements being added or removed, to notice a return to the feed. On the
   feed, bursts of changes LinkedIn makes around the feed cause at most one full rescan
   per second, and the last change is always picked up.
-
+- The browser test results record a SHA-256 of the extension files they tested, so
+  the evidence in `test-results/` can be tied to the code it describes.
 - Resizing the window re-measures the feed once, 200 ms after the resizing stops,
   instead of on every resize event.
 

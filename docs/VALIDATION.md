@@ -23,6 +23,18 @@ No failing cases in the final run. See `test-results/unit.tap`,
 Screenshots of both popup languages and both help languages are included in
 `test-results/`. They show synthetic test data, not an authenticated account.
 
+`test-results/` is regenerated at each release by running the tests on the tagged
+tree; running the browser tests rewrites it in place. `browser-results.json`
+records `extensionSha256`, a SHA-256 over every file under `extension/` the run
+loaded, so a result can be tied to the code it tested. To check it against a tree:
+
+```bash
+cd extension && find . -type f -printf '%P\n' | LC_ALL=C sort | xargs sha256sum | sha256sum
+```
+
+The first field must equal `extensionSha256`; a different value means the results
+describe other code.
+
 ### Unit tests
 
 The Node suite covers configuration types and whitelists, defaults, serialized

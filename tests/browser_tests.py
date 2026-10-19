@@ -7,6 +7,7 @@ Layout, DOM, media playback and IntersectionObserver use the actual browser.
 """
 from __future__ import annotations
 import base64
+import hashlib
 import json
 import os
 import sys
@@ -20,6 +21,18 @@ EXT = ROOT / 'extension'
 OUT = ROOT / 'test-results'
 OUT.mkdir(exist_ok=True)
 KEY = 'feedGuardSettingsV1'
+EXTENSION_HASH_METHOD = ("sha256 of a sha256sum listing of every file under extension/, paths relative "
+    "to it and sorted bytewise; from the repository root: cd extension && find . -type f -printf '%P\\n' "
+    "| LC_ALL=C sort | xargs sha256sum | sha256sum")
+
+def extension_sha256():
+    """Ties browser-results.json to the exact extension/ tree these tests loaded."""
+    paths = sorted(path.relative_to(EXT).as_posix() for path in EXT.rglob('*') if path.is_file())
+    listing = ''.join(f'{hashlib.sha256((EXT / rel).read_bytes()).hexdigest()}  {rel}\n' for rel in paths)
+    return hashlib.sha256(listing.encode()).hexdigest()
+
+# Hashed before any test runs: the tree the tests read, not one edited meanwhile.
+EXTENSION_SHA256 = extension_sha256()
 SOURCE = '\n'.join((EXT / name).read_text() for name in ['config.js', 'selectors.js', 'content.js'])
 MEDIA = 'data:video/webm;base64,' + base64.b64encode((ROOT / 'tests/silent.webm').read_bytes()).decode()
 ROOTS_SELECTOR = '[data-testid="mainFeed"], main, [role="main"]'  # selectors.js ROOTS
@@ -607,8 +620,9 @@ with sync_playwright() as p:
     browser.close()
 
 report={'utc':datetime.now(timezone.utc).isoformat(),'browser':browser_version,
+        'extensionSha256':EXTENSION_SHA256,'extensionSha256Method':EXTENSION_HASH_METHOD,
         'method':'Actual Chromium DOM/media/IntersectionObserver in an isolated JavaScript world; extension runtime/storage APIs and URL/navigation are simulated. Pages are about:blank fixtures: no navigation or policy override. No installed extension, no LinkedIn login, no DNR browser-engine test. Hidden/PiP/fullscreen/BFCache states simulated.',
         'passed':sum(item['passed'] for item in results),'failed':sum(not item['passed'] for item in results),'tests':results}
 (OUT/'browser-results.json').write_text(json.dumps(report,indent=2)+'\n')
-print(json.dumps({'passed':report['passed'],'failed':report['failed'],'browser':browser_version}),flush=True)
+print(json.dumps({'passed':report['passed'],'failed':report['failed'],'browser':browser_version,'extensionSha256':EXTENSION_SHA256}),flush=True)
 sys.exit(1 if report['failed'] else 0)
