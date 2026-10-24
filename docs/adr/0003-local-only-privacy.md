@@ -33,3 +33,7 @@ The extension **makes no network request of its own** and has **no telemetry**. 
 
 - A grep in CI for `fetch(`, `XMLHttpRequest`, `sendBeacon`, `WebSocket` and `new Image` in `extension/` finds nothing.
 - `tests/ui.test.cjs` covers the sanitizer.
+
+## Amendments
+
+- 2026-10-24 (0.4.0): diagnostics schema 2 adds the JavaScript heap in use in 50 MB buckets (`heapMB`, or null) and a `pressure` boolean (ADR-0015). Settings are six booleans.

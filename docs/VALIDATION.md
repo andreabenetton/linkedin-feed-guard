@@ -2,7 +2,7 @@
   SPDX-License-Identifier: GPL-3.0-only
   SPDX-FileCopyrightText: 2026 LinkedIn Feed Guard contributors
 -->
-# Validation - LinkedIn Feed Guard 0.3.0
+# Validation - LinkedIn Feed Guard 0.4.0
 
 ## Scope
 
@@ -22,7 +22,7 @@ logs and UI screenshots. Each release ZIP carries its own SHA-256 checksum.
 
 ## Test results
 
-**71 tests passed: 24 Node unit tests and 47 Chromium browser/UI fixture cases.**
+**78 tests passed: 27 Node unit tests and 51 Chromium browser/UI fixture cases.**
 No failing cases in the final run. See `test-results/unit.tap`,
 `test-results/browser.log` and `test-results/browser-results.json`.
 
@@ -66,6 +66,14 @@ page search, draft/editor protection, live settings, scroll-height/resize handli
 large insertions, removed-node cleanup, route changes, video pause behavior,
 media protections, lifecycle cleanup and preservation of page-owned CSS values.
 
+The long-feed notice (ADR-0015) is covered on a 210-post fixture: it appears outside
+the feed root, a click reloads (simulated `location`), Later snoozes it, and the
+setting, the master switch, an excluded route and an orphaned script keep it away.
+Class-change scoping is covered by counting observer records: class churn beside the
+feed delivers none, while a class that hides the root's ancestor still releases it.
+The popup's heap counter, warning and Reload feed button are covered in both languages.
+Real heap growth on LinkedIn and whether the notice prevents a crash were not measured.
+
 Detection cases include modern mainFeed without a main element, component-key
 wrappers, empty first main elements, hidden roots, late feed containers, attribute
 hydration/removal, modern-to-class-based root replacement, strict list-item
@@ -81,7 +89,7 @@ warning in both languages.
 
 ## Browser and policy constraints
 
-The recorded run used Google Chrome 148.0.7778.167, headless, driven by Playwright.
+The recorded run used Chromium 153.0.8010.12, headless, driven by Playwright.
 An earlier run, on Chromium 144.0.7559.96, was under a managed policy with
 `ExtensionInstallBlocklist: ["*"]` and `URLBlocklist: ["*"]`, which was not
 altered. Either way the tests do not install the extension, navigate to LinkedIn, sign in,

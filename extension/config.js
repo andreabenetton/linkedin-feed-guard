@@ -10,6 +10,18 @@
     pauseOffscreenVideos: true,
     pauseHiddenVideos: true,
     blockTracking: false,
+    memoryAdvisory: true,
+  });
+  // Long-feed memory advisory (ADR-0015). A feed that keeps growing is the usual
+  // road to an out-of-memory "Aw, Snap!": the only thing that frees it is a reload,
+  // which the extension offers and never performs on its own.
+  const ADVISORY = Object.freeze({
+    posts: 200,          // detected posts in the current feed
+    heapMB: 1200,        // JavaScript heap in use, where the browser reports it
+    heapRatio: 0.5,      // or this share of the heap limit
+    interval: 5000,      // at most one sample per interval, only when work runs anyway
+    snoozePosts: 100,    // "Later" waits for this many more posts...
+    snoozeGrowth: 1.25,  // ...or this much more heap
   });
   const KEYS = Object.freeze(Object.keys(DEFAULTS));
   function normalize(value) {
@@ -43,7 +55,7 @@
     return '0.0.0';
   }
   globalThis.LLGuardConfig = Object.freeze({
-    DEFAULTS, KEYS, normalize, validatePatch,
+    DEFAULTS, KEYS, ADVISORY, normalize, validatePatch,
     VERSION: manifestVersion(),
     STORAGE_KEY: 'feedGuardSettingsV1',
     RULESET: 'optional_tracking',

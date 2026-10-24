@@ -4,7 +4,7 @@
 -->
 # LinkedIn Feed Guard
 
-**Version 0.3.0 - local beta for Brave and Chromium browsers. Licensed GPL-3.0-only.**
+**Version 0.4.0 - local beta for Brave and Chromium browsers. Licensed GPL-3.0-only.**
 
 Reduce unnecessary rendering and video playback in the LinkedIn home feed without
 removing posts, reloading pages, or suspending tabs. Not affiliated with LinkedIn.
@@ -83,6 +83,7 @@ not the popup override. Diagnostic JSON uses stable English keys in both languag
 | Off-screen rendering | On | Applies `content-visibility: auto` to distant, eligible cards |
 | Pause off-screen videos | On | Pauses videos outside the viewport margin |
 | Pause videos in background | On | Pauses detected videos when the tab is hidden |
+| Long-feed memory warning | On | Offers a reload when the feed grows heavy; never reloads by itself |
 | Experimental network filter | **Off** | One narrow, optional rule for `/li/track` |
 
 Keep the network filter off during initial testing and do not change Brave Shields
@@ -119,6 +120,18 @@ preload, autoplay attributes, or account settings. Fullscreen and
 picture-in-picture playback are excluded. Videos are never automatically resumed
 by the extension. Pausing does not guarantee that buffering or allocation stops.
 
+### Long-feed memory warning
+
+The feed only grows: every post you scroll past stays in memory, and a tab that runs
+out of it shows "Aw, Snap!". Deferred rendering and video pauses cannot release that
+memory; a reload does. When the feed reaches 200 detected posts, or Chromium reports
+at least 1200 MB (or half the limit) of JavaScript heap in use, a small notice in the
+bottom-right corner offers **Reload feed** or **Later** (which waits for 100 more
+posts or 25 % more memory). The popup shows the heap in use and, when the feed is
+heavy, the same button. The extension never reloads on its own: save drafts first.
+The heap figure is Chromium's coarse `performance.memory`, not the whole tab's memory
+(see ADR-0015).
+
 ### Optional network rule
 
 The packaged DNR rule blocks XHR/fetch, beacon, and image requests initiated by
@@ -148,11 +161,12 @@ LinkedIn can serve different layouts, and the selectors may need further changes
 
 ## Privacy and permissions
 
-- Local storage contains only five boolean settings and one language preference.
+- Local storage contains only six boolean settings and one language preference.
   No `storage.sync`, content archive, URL history, or diagnostic log is used.
 - Per-tab counters exist only in memory. Diagnostics are generated on request and
   contain the popup's and the page script's versions, fixed status values, the
-  enabled and rendering-support flags, and aggregate counts from fixed selectors.
+  enabled and rendering-support flags, aggregate counts from fixed selectors, and
+  the JavaScript heap in use in 50 MB steps.
   They exclude text, HTML, names, input values, attribute values, post/account IDs,
   titles, URLs, cookies, and browser fingerprint fields. Unknown report fields are
   stripped again in the popup before display/copy.

@@ -28,3 +28,7 @@ Store settings under one versioned key, **`feedGuardSettingsV1`**, normalized an
 ## Validation
 
 - `tests/worker.test.cjs` covers validation, sender rejection and migration.
+
+## Amendments
+
+- 2026-10-24 (0.4.0): a sixth boolean, `memoryAdvisory` (default on, ADR-0015), joins `feedGuardSettingsV1`. Adding a key with a default is not a new schema: `normalize` fills it, and existing values are kept.

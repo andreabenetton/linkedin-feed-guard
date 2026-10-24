@@ -70,6 +70,9 @@ test('configuration is typed, whitelisted, copied and does not accept arbitrary 
   assert.throws(()=>c.validatePatch({enabled:1}));
   assert.throws(()=>c.validatePatch([]));
   assert.throws(()=>c.validatePatch(JSON.parse('{"__proto__":true}')));
+  assert.equal(c.normalize().memoryAdvisory,true);
+  assert.equal(c.normalize({memoryAdvisory:false}).memoryAdvisory,false);
+  assert.equal(c.ADVISORY.posts>0&&c.ADVISORY.heapMB>0,true);
   const first = c.normalize(); first.enabled=false;
   assert.equal(c.normalize().enabled,true);
 });
@@ -109,6 +112,12 @@ test('DNR failure does not silently persist a successful opt-in', async () => {
 test('storage failure rolls back previously changed browser rules', async () => {
   const h=harness();h.failures.store=true;
   const r=await h.request('set-settings',{blockTracking:true});assert.equal(r.ok,false);assert.equal(h.rules.size,0);
+});
+test('a 0.3.0 settings object gains the new advisory default without losing values', async () => {
+  const h=harness({[KEY]:{enabled:true,renderOffscreen:false,pauseOffscreenVideos:true,pauseHiddenVideos:false,blockTracking:false}});
+  h.events.install.emit({reason:'update'});
+  const s=(await h.request('get-settings')).settings;
+  assert.equal(s.renderOffscreen,false);assert.equal(s.pauseHiddenVideos,false);assert.equal(s.memoryAdvisory,true);
 });
 test('update migration preserves user settings instead of resetting defaults', async () => {
   const h=harness({[KEY]:{enabled:false,pauseOffscreenVideos:false,blockTracking:true}});

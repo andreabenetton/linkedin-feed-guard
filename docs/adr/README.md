@@ -27,3 +27,4 @@ Status values: **Proposed**, **Accepted**, **Superseded by NNNN**, **Deprecated*
 | [0012](0012-i18n-en-it.md) | Languages — English and Italian, packaged, with an in-app override | Accepted |
 | [0013](0013-testing-strategy.md) | Testing — Node vm unit tests and Chromium fixtures; no live-site tests | Accepted |
 | [0014](0014-versioning-semver.md) | Versioning — SemVer, Keep a Changelog, tagged releases | Accepted |
+| [0015](0015-long-feed-memory-advisory.md) | Memory — advise a reload of a long feed; never reload on our own | Accepted |

@@ -18,7 +18,7 @@
   }
   function lock(value) {
     busy = value;
-    for (const control of [...controls, byId('refresh'), byId('diagnostics')]) control.disabled = value;
+    for (const control of [...controls, byId('refresh'), byId('diagnostics'), byId('reload-feed')]) control.disabled = value;
   }
   async function timeout(promise) {
     let timer;
@@ -51,14 +51,21 @@
     const status = lastStatus;
     if (!status) {
       byId('scope').textContent = I18n.t(checked ? 'noPage' : 'checking');
-      for (const key of ['posts', 'deferred', 'paused']) byId(key).textContent = '\u2014';
+      for (const key of ['posts', 'deferred', 'paused', 'heap']) byId(key).textContent = '\u2014';
       byId('hint').textContent = checked ? I18n.t('noPageHint') : '';
+      byId('pressure').hidden = true;
     } else {
       const scopes = ['feed', 'unrecognized', 'waiting', 'outside-feed', 'disabled', 'error', 'stale'];
       byId('scope').textContent = I18n.t(scopes.includes(status.scope) ? status.scope : 'unknown');
       for (const key of ['posts', 'deferred', 'paused']) {
         byId(key).textContent = Number.isSafeInteger(status[key]) && status[key] >= 0 ? String(status[key]) : '\u2014';
       }
+      // Where the browser reports it (Chromium); elsewhere a dash.
+      byId('heap').textContent = Number.isSafeInteger(status.heapMB) && status.heapMB >= 0 ? String(status.heapMB) : '\u2014';
+      // A heavy feed is said first, above the settings, with its one action.
+      const pressure = status.pressure === true && status.scope === 'feed';
+      byId('pressure').hidden = !pressure;
+      byId('pressure-text').textContent = pressure ? I18n.t('pressureHint') : '';
       const hint = status.scope === 'stale' ? 'staleHint' : status.scope === 'error' ? 'errorHint' :
         (status.scope === 'unrecognized' || status.scope === 'waiting') ? 'zeroHint' :
         !status.supported ? 'unsupportedHint' : 'normalHint';
@@ -149,6 +156,15 @@
   });
   byId('settings').addEventListener('submit', event => event.preventDefault());
   byId('refresh').addEventListener('click', () => void refresh());
+  byId('reload-feed').addEventListener('click', async () => {
+    // tabs.reload on the active tab needs no permission; the user asked for it.
+    try {
+      const [tab] = await timeout(chrome.tabs.query({active: true, currentWindow: true}));
+      if (!Number.isInteger(tab?.id)) throw new Error('no-tab');
+      await timeout(chrome.tabs.reload(tab.id));
+      window.close();
+    } catch { error('reloadError'); }
+  });
   byId('help').addEventListener('click', () => {
     chrome.tabs.create({url: chrome.runtime.getURL('help.html')}).catch(() => error('helpError'));
   });

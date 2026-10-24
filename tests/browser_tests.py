@@ -34,7 +34,7 @@ def extension_sha256():
 
 # Hashed before any test runs: the tree the tests read, not one edited meanwhile.
 EXTENSION_SHA256 = extension_sha256()
-SOURCE = '\n'.join((EXT / name).read_text() for name in ['config.js', 'selectors.js', 'content.js'])
+SOURCE = '\n'.join((EXT / name).read_text() for name in ['config.js', 'selectors.js', 'advisory.js', 'content.js'])
 MEDIA = 'data:video/webm;base64,' + base64.b64encode((ROOT / 'tests/silent.webm').read_bytes()).decode()
 ROOTS_SELECTOR = '[data-testid="mainFeed"], main, [role="main"]'  # selectors.js ROOTS
 CSS = '''body{margin:0;background:white}main{width:600px;margin:0 20px}.occludable-update{box-sizing:border-box;min-height:200px;margin:12px 0;padding:15px;border:1px solid #aaa}video{width:160px;height:90px}textarea{width:250px;height:48px}.spacer{height:1500px}'''
@@ -60,7 +60,7 @@ STUB = r'''
  const changeListeners=[], messageListeners=[];
  let stored=INITIAL;
  const nativeHidden=Object.getOwnPropertyDescriptor(Document.prototype,'hidden').get;
- const T = globalThis.__FGTEST__ = {hidden:null,pip:null,fullscreen:null,readAttempts:0,location:{protocol:'https:',hostname:'www.linkedin.com',pathname:TEST_PATH}};
+ const T = globalThis.__FGTEST__ = {hidden:null,pip:null,fullscreen:null,readAttempts:0,location:{protocol:'https:',hostname:'www.linkedin.com',pathname:TEST_PATH,reload(){T.reloads++;}},reloads:0};
  Object.defineProperty(document,'hidden',{configurable:true,get:()=>T.hidden===null?nativeHidden.call(document):T.hidden});
  Object.defineProperty(document,'pictureInPictureElement',{configurable:true,get:()=>T.pip?document.getElementById(T.pip):null});
  Object.defineProperty(document,'fullscreenElement',{configurable:true,get:()=>T.fullscreen?document.getElementById(T.fullscreen):null});
@@ -77,6 +77,9 @@ STUB = r'''
  // Counts full root selections (Selectors.findRoot) by their one ROOTS query.
  const qsa=Document.prototype.querySelectorAll;T.rootScans=0;
  Document.prototype.querySelectorAll=function(selector){if(selector===ROOTS_SELECTOR)T.rootScans++;return qsa.call(this,selector);};
+ // Counts MutationObserver records the content script receives.
+ const NativeMO=MutationObserver;T.records=0;
+ globalThis.MutationObserver=class extends NativeMO{constructor(cb){super((records,observer)=>{T.records+=records.length;cb(records,observer);});}};
  // Counts IntersectionObserver.unobserve calls: a resize remeasure unobserves every card.
  const unobserve=IntersectionObserver.prototype.unobserve;T.unobserved=0;
  IntersectionObserver.prototype.unobserve=function(target){T.unobserved++;return unobserve.call(this,target);};
@@ -409,6 +412,70 @@ with sync_playwright() as p:
             assert f.page.locator('#post-39').evaluate('e=>[e.style.getPropertyValue("--llg-v1-block-size"),e.style.getPropertyPriority("--llg-v1-block-size")]')==['123px','important']
     case('Pre-existing custom CSS property is restored, rather than overwriting unrelated page state',custom_property_restore)
 
+    ADVISORY='[data-llg-v1-advisory]'
+    def advisory_long_feed():
+        with Fixture(browser,content='<main>'+cards(210)+'</main>') as f:
+            status=f.status()
+            assert status['posts']==210 and status['pressure'] is True,status
+            assert isinstance(status['heapMB'],int) and status['heapMB']>0,status
+            assert f.page.locator(ADVISORY).count()==1
+            # Outside the feed root: no post node gains a child or is touched.
+            assert f.page.locator('main '+ADVISORY).count()==0
+            assert f.page.locator('.occludable-update').count()==210
+            assert '210' in f.page.locator(ADVISORY+' p').first.inner_text()
+            f.page.locator(ADVISORY+' button.primary').click();f.wait(100)
+            assert f.evaluate('__FGTEST__.reloads')==1
+        with Fixture(browser,content='<main>'+cards(210)+'</main>') as f:
+            f.page.locator(ADVISORY+' button:not(.primary)').click();f.wait()
+            assert f.page.locator(ADVISORY).count()==0
+            assert f.evaluate('__FGTEST__.reloads')==0
+            # Snoozed: 50 more posts are not enough to ask again.
+            f.page.evaluate('(html)=>document.querySelector("main").insertAdjacentHTML("beforeend",html)',cards(50,start=210));f.wait(600)
+            assert f.page.locator(ADVISORY).count()==0
+    case('A long feed gets a reload notice outside the feed; only a click reloads, and Later snoozes it',advisory_long_feed)
+    def advisory_settings():
+        with Fixture(browser) as f:
+            assert f.status()['pressure'] is False,f.status()
+            assert f.page.locator(ADVISORY).count()==0
+        with Fixture(browser,content='<main>'+cards(210)+'</main>') as f:
+            f.patch(memoryAdvisory=False)
+            assert f.page.locator(ADVISORY).count()==0
+            assert f.status()['pressure'] is False
+            f.patch(memoryAdvisory=True);f.page.evaluate('document.querySelector("main").insertAdjacentHTML("beforeend","<div class=occludable-update>x</div>")');f.wait()
+            assert f.page.locator(ADVISORY).count()==1
+            f.patch(enabled=False)
+            assert f.page.locator(ADVISORY).count()==0
+        with Fixture(browser,content='<main>'+cards(210)+'</main>',path='/messaging/') as f:
+            assert f.page.locator(ADVISORY).count()==0
+        with Fixture(browser,content='<main>'+cards(210)+'</main>') as f:
+            f.evaluate('__FGTEST__.orphan()')
+            f.page.evaluate('document.querySelector("main").insertAdjacentHTML("beforeend","<div class=occludable-update>x</div>")');f.wait()
+            assert f.page.locator(ADVISORY).count()==0
+    case('The notice follows its setting and the master switch, stays off other pages and leaves with an orphaned script',advisory_settings)
+    def class_scope():
+        with Fixture(browser) as f:
+            assert f.status()['posts']==40
+            # Class churn beside the feed no longer wakes the observer once cards are known...
+            f.evaluate('__FGTEST__.rootScans=0;__FGTEST__.records=0')
+            f.page.evaluate('()=>new Promise(done=>{let n=0;const id=setInterval(()=>{document.getElementById("advert").classList.toggle("churn");if(++n===60){clearInterval(id);done();}},10)})');f.wait()
+            assert f.evaluate('__FGTEST__.rootScans')==0,f.evaluate('__FGTEST__.rootScans')
+            assert f.evaluate('__FGTEST__.records')==0,f.evaluate('__FGTEST__.records')
+            # ...while class changes inside the feed still update cards.
+            f.page.evaluate('document.querySelector("main").insertAdjacentHTML("beforeend","<div id=late-class><p>late</p></div>")');f.wait()
+            f.page.locator('#late-class').evaluate('e=>e.classList.add("occludable-update")');f.wait()
+            assert f.status()['posts']==41,f.status()
+        with Fixture(browser,content='<div id="wrap"><main>'+cards(6)+'</main></div><div id="other"></div>') as f:
+            assert f.status()['posts']==6
+            f.page.add_style_tag(content='.gone{display:none}')
+            # A class on an ancestor that hides the root is still noticed...
+            f.page.locator('#wrap').evaluate('e=>e.classList.add("gone")');f.wait(1300)
+            assert f.status()['scope']=='waiting',f.status()
+            # ...and with no root left, a feed identified by class alone is found again.
+            f.page.evaluate('document.getElementById("other").insertAdjacentHTML("beforeend","<main><div id=c1><p>x</p></div></main>")');f.wait()
+            f.page.locator('#c1').evaluate('e=>e.classList.add("occludable-update")');f.wait(1300)
+            assert f.status()['posts']==1,f.status()
+    case('Class changes are watched inside the feed only once cards are known',class_scope)
+
     def modern_cards(n=12, keyed=True, nested=False):
         return ''.join('<div role="listitem" '+(f'componentkey="expandedSYNTHETIC{i}FeedType_MAIN_FEED"' if keyed else '')+
             f' id="modern-{i}" style="min-height:240px"><div data-testid="expandable-text-box">Synthetic post {i}</div>'+
@@ -528,15 +595,16 @@ with sync_playwright() as p:
         html=re.sub(r'<script[^>]*src=[^>]*></script>','',html)
         html=re.sub(r'<link[^>]*>','',html)
         page.set_content(html);page.add_style_tag(content=(EXT/f'{kind}.css').read_text())
-        payload={'pending':pending,'version':VERSION,'diagVersion':diag_version,'lang':lang,'stored':initial or {},'status':status or {'ok':True,'scope':'feed','supported':True,'posts':40,'deferred':28,'videos':1,'paused':2}}
+        payload={'pending':pending,'version':VERSION,'diagVersion':diag_version,'lang':lang,'stored':initial or {},'status':status or {'ok':True,'scope':'feed','supported':True,'posts':40,'deferred':28,'videos':1,'paused':2,'heapMB':310,'pressure':False}}
         page.evaluate(r'''(input)=>{
+          window.close=()=>{window.__closed=true;};
           const events=[];const store=input.stored;
           window.__uiStore=store;window.__uiEvents=events;window.__calls=[];
           window.chrome={
             i18n:{getUILanguage:()=>input.lang},
             storage:{local:{get:async(key)=>({[key]:store[key]}),set:async(values)=>{Object.assign(store,values);for(const [key,value] of Object.entries(values))for(const cb of events)cb({[key]:{newValue:value}},'local');}},onChanged:{addListener:cb=>events.push(cb)}},
             runtime:{sendMessage:async(m)=>{__calls.push(m);return {ok:true,settings:{enabled:true,renderOffscreen:true,pauseOffscreenVideos:true,pauseHiddenVideos:true,blockTracking:false},trackingRuleActive:false};},getURL:s=>s,getManifest:()=>({version:input.version})},
-            tabs:{query:()=>input.pending?new Promise(()=>{}):Promise.resolve([{id:1}]),sendMessage:async(id,m)=>{
+            tabs:{reload:async(id)=>{__calls.push({type:'reload',id});},query:()=>input.pending?new Promise(()=>{}):Promise.resolve([{id:1}]),sendMessage:async(id,m)=>{
               __calls.push(m);
               if(m.type==='diagnostics')return {ok:true,diagnostics:{schema:1,version:input.diagVersion,scope:'unrecognized',pageCategory:'main-feed',visibility:'visible',enabled:true,renderSupported:true,posts:0,root:'mainFeed',selectors:{mainFeed:1,listItems:6,unapproved:'PRIVATE'},url:'PRIVATE URL',html:'PRIVATE HTML'}};
               return {version:input.version, ...input.status};
@@ -551,6 +619,9 @@ with sync_playwright() as p:
         for locale in ['en-US','it-IT']:
             context,page,errors=ui_page(lang=locale)
             assert page.locator('#posts').inner_text()=='40'
+            assert page.locator('#heap').inner_text()=='310'
+            assert page.locator('#pressure').is_hidden()
+            assert page.locator('#memoryAdvisory').is_checked() is True
             assert page.locator('#blockTracking').is_checked() is False
             assert page.locator('#enabled').is_checked() is True
             assert page.locator('#error').is_hidden()
@@ -643,6 +714,19 @@ with sync_playwright() as p:
             assert data['scope']==scope,data
             assert not errors,errors
             context.close()
+    def popup_pressure():
+        for locale,word in [('en-US','Aw, Snap'),('it-IT','Aw, Snap')]:
+            context,page,errors=ui_page(lang=locale,status={'ok':True,'scope':'feed','supported':True,'posts':260,'deferred':200,'paused':0,'heapMB':1350,'pressure':True})
+            assert word in page.locator('#pressure').inner_text()
+            assert page.locator('#heap').inner_text()=='1350'
+            assert page.locator('#reload-feed').is_visible()
+            if locale=='en-US':page.locator('body').screenshot(path=str(OUT/'popup-pressure.png'))
+            page.click('#reload-feed');page.wait_for_timeout(100)
+            assert page.evaluate('__calls.some(c=>c.type==="reload"&&c.id===1)')
+            assert page.evaluate('window.__closed===true')
+            assert not errors,errors
+            context.close()
+    case('A heavy feed shows memory, a localized warning and a Reload feed button in the popup',popup_pressure)
     case('Diagnostics report the page script version beside the popup version and mark a mismatch stale',report_versions)
     browser.close()
 

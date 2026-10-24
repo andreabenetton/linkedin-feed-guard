@@ -28,3 +28,7 @@ On any unexpected error the content script **stops all optimizations until the p
 ## Validation
 
 - Fixtures cover the stop path.
+
+## Amendments
+
+- 2026-10-24 (0.4.0): stopping also removes the long-feed notice (ADR-0015).

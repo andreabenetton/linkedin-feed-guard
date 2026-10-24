@@ -7,6 +7,8 @@
   'use strict';
   const Config = globalThis.LLGuardConfig;
   const Selectors = globalThis.LLGuardSelectors;
+  const Advisory = globalThis.LLGuardAdvisory;
+  const Limits = Config.ADVISORY;
   // A hidden input is never rendered, focused or edited: form plumbing, not a
   // draft. Every other input type can hold or receive something the user does.
   const SENSITIVE_SELECTOR = 'input:not([type="hidden" i]), textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="dialog"], [role="menu"], [aria-expanded="true"]';
@@ -29,6 +31,17 @@
   // null, 'route' (off the feed: child lists only, to notice an in-page route
   // change) or 'feed' (child lists plus identity and interaction attributes).
   let observing = null;
+  // While the feed has posts, class changes are observed inside the feed root and on
+  // the root's own ancestors only (a class there can hide the root): LinkedIn toggles
+  // classes all over the page, and elsewhere they cannot make or unmake a card.
+  // A new feed elsewhere still arrives as inserted nodes, which stay observed.
+  // With no posts yet, class changes are watched across the whole document.
+  let classScope = null;
+  // Memory advisory (ADR-0015): sampled at most once per Limits.interval, only
+  // while a flush runs anyway; never a timer of its own.
+  let lastSample = -Infinity;
+  let heap = null;
+  let snooze = null;
   let failed = false;
   let version = 0;
   let pausedCount = 0;
@@ -193,8 +206,49 @@
   }
   function stop() {
     failed = true;
-    clearManaged();
-    domObserver.disconnect(); observing = null;
+    clearManaged(); quiet();
+    domObserver.disconnect(); observing = null; classScope = null;
+  }
+  function sampleHeap() {
+    // Chromium's non-standard performance.memory: the renderer's JavaScript heap,
+    // which content scripts share with the page. Coarse and delayed by design.
+    try {
+      const memory = performance.memory;
+      if (!memory || !(memory.usedJSHeapSize > 0)) return null;
+      return {usedMB: Math.round(memory.usedJSHeapSize / 1048576),
+        limitMB: Math.round((memory.jsHeapSizeLimit || 0) / 1048576)};
+    } catch { return null; }
+  }
+  function underPressure(count, sample) {
+    if (count >= Limits.posts) return true;
+    if (!sample) return false;
+    return sample.usedMB >= Limits.heapMB ||
+      (sample.limitMB > 0 && sample.usedMB / sample.limitMB >= Limits.heapRatio);
+  }
+  const roundMB = (value, step) => Math.round(value / step) * step;
+  function quiet() { Advisory?.hide(); }
+  function later() {
+    snooze = {posts: posts.size, heapMB: heap ? heap.usedMB : null};
+    quiet();
+  }
+  function reloadFeed() {
+    quiet();
+    // The user's click, never the extension's own decision. LinkedIn's own
+    // unsaved-changes prompt, if any, still runs.
+    location.reload();
+  }
+  function advise() {
+    if (!Advisory || !active() || !settings.memoryAdvisory) { quiet(); return; }
+    const now = performance.now();
+    if (now - lastSample < Limits.interval) return;
+    lastSample = now; heap = sampleHeap();
+    const count = posts.size;
+    if (!underPressure(count, heap)) { quiet(); return; }
+    if (snooze && count < snooze.posts + Limits.snoozePosts &&
+        !(heap && snooze.heapMB && heap.usedMB >= snooze.heapMB * Limits.snoozeGrowth)) return;
+    snooze = null;
+    Advisory.show({posts: count, heapMB: heap ? roundMB(heap.usedMB, 10) : null},
+      {reload: reloadFeed, later});
   }
   function failOpen() {
     stop();
@@ -236,12 +290,15 @@
       if (next !== main) {
         clearManaged(); main = next; needsScan = true;
       }
-      if (!main) { addedRoots.clear(); dirtyPosts.clear(); return; }
+      // No root: back to watching classes document-wide before waiting for one.
+      if (!main) { addedRoots.clear(); dirtyPosts.clear(); observe(); return; }
       if (needsPrune || needsScan) prune();
       if (needsScan) discover(main);
       else for (const root of addedRoots) { if (root.isConnected) discover(root); }
       for (const post of dirtyPosts) { if (post.isConnected) refreshPost(post); }
       addedRoots.clear(); dirtyPosts.clear(); needsScan = false; needsPrune = false;
+      observe();
+      advise();
     } catch { failOpen(); }
   }
   function schedule() {
@@ -249,18 +306,30 @@
   }
   function observe() {
     const mode = !settings.enabled || pageSuspended || failed ? null : inFeed() ? 'feed' : 'route';
-    if (mode === observing) return;
-    domObserver.disconnect(); observing = mode;
+    const scope = mode === 'feed' && main?.isConnected && posts.size > 0 ? main : null;
+    if (mode === observing && scope === classScope) return;
+    // Changing registrations must not lose a change already queued: one that was
+    // pending asks for a full rescan instead of being replayed.
+    if (observing === 'feed' && domObserver.takeRecords().length) { needsScan = true; schedule(); }
+    domObserver.disconnect(); observing = mode; classScope = scope;
     if (mode === 'feed') {
+      const filter = [...Selectors.ATTRIBUTES, 'contenteditable', 'aria-expanded'];
       domObserver.observe(document.documentElement, {childList: true, subtree: true, attributes: true,
-        attributeFilter: [...Selectors.ATTRIBUTES, 'contenteditable', 'aria-expanded']});
+        attributeFilter: scope ? filter.filter(name => name !== 'class') : filter});
+      if (scope) {
+        domObserver.observe(scope, {attributes: true, subtree: true, attributeFilter: ['class']});
+        // Node-only registrations; documentElement keeps its own, wider one above.
+        for (let node = scope.parentElement; node && node !== document.documentElement; node = node.parentElement) {
+          domObserver.observe(node, {attributes: true, attributeFilter: ['class']});
+        }
+      }
     } else if (mode === 'route') {
       domObserver.observe(document.documentElement, {childList: true, subtree: true});
     }
   }
   function syncRoute() {
     observe();
-    if (!active()) { if (main || posts.size) clearManaged(); return; }
+    if (!active()) { quiet(); if (main || posts.size) clearManaged(); return; }
     rootDirty = true; needsScan = true; schedule();
   }
   const domObserver = new MutationObserver(records => {
@@ -313,12 +382,14 @@
   function configure(value) {
     settings = Config.normalize(value);
     observe();
-    if (!settings.enabled) { clearManaged(); return; }
+    if (!settings.enabled) { clearManaged(); quiet(); return; }
+    if (!settings.memoryAdvisory) quiet();
+    else lastSample = -Infinity;
     if (active()) {
       for (const post of posts.keys()) updatePost(post);
       for (const [video, meta] of videos) maybePause(video, meta.near);
       rootDirty = true; needsScan = true; schedule();
-    } else clearManaged();
+    } else { clearManaged(); quiet(); }
   }
   async function reloadSettings() {
     const ticket = version;
@@ -335,11 +406,14 @@
   function status() {
     const variants = {legacy: 0, 'component-key': 0, 'list-item': 0};
     for (const post of posts.keys()) variants[Selectors.variant(post)]++;
+    const sample = sampleHeap();
     return {ok: true, version: Config.VERSION, scope: failed ? 'error' : !settings.enabled ? 'disabled' :
       !inFeed() ? 'outside-feed' : !main ? 'waiting' : posts.size ? 'feed' : 'unrecognized',
       supported, posts: posts.size,
       deferred: [...posts.keys()].filter(post => post.hasAttribute(DEFER_ATTR)).length,
-      videos: videos.size, paused: pausedCount, root: Selectors.kind(main), variants};
+      videos: videos.size, paused: pausedCount, root: Selectors.kind(main), variants,
+      heapMB: sample ? roundMB(sample.usedMB, 10) : null,
+      pressure: Boolean(settings.memoryAdvisory && active() && underPressure(posts.size, sample))};
   }
   function rescan() {
     if (active() && !document.hidden) {
@@ -355,12 +429,15 @@
       const current = status();
       if (message.type !== 'diagnostics') { respond(current); return false; }
       respond({ok: true, diagnostics: {
-        schema: 1, version: Config.VERSION,
+        schema: 2, version: Config.VERSION,
         pageCategory: inFeed() ? 'main-feed' : 'other',
         scope: current.scope, visibility: document.hidden ? 'hidden' : 'visible',
         enabled: settings.enabled, renderSupported: supported,
         root: current.root, posts: current.posts, deferred: current.deferred,
         videos: current.videos, paused: current.paused, variants: current.variants,
+        // 50 MB buckets: enough to see growth, too coarse to fingerprint anything.
+        heapMB: current.heapMB === null ? null : roundMB(current.heapMB, 50),
+        pressure: current.pressure,
         selectors: inFeed() ? Selectors.counts() : {},
         errorCode: failed ? 'local-optimization-stopped' : null,
       }});
@@ -370,7 +447,9 @@
   document.addEventListener('play', event => {
     if (orphaned() || !active() || !(event.target instanceof HTMLVideoElement)) return;
     try {
-      if (!main) main = findMain();
+      // A root found here is a new root: every card in it still needs discovering,
+      // not only the one that started playing.
+      if (!main) { main = findMain(); if (main) { needsScan = true; schedule(); } }
       const post = topPost(event.target);
       if (post) { trackPost(post); maybePause(event.target); updatePost(post); }
     } catch { failOpen(); }
@@ -427,7 +506,7 @@
   window.addEventListener('hashchange', routeChanged);
   if (window.navigation) window.navigation.addEventListener('currententrychange', routeChanged);
   window.addEventListener('pagehide', () => {
-    pageSuspended = true; observe(); clearManaged();
+    pageSuspended = true; observe(); clearManaged(); quiet();
   });
   window.addEventListener('pageshow', event => {
     if (event.persisted && !orphaned()) { pageSuspended = false; void reloadSettings(); }

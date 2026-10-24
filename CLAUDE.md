@@ -46,6 +46,7 @@ breaking the site the extension runs on, and for code a reviewer can read as it 
   fullscreen are left alone (ADR-0009).
 - **Act only on `/feed` or `/feed/`**, top frame, isolated world (ADR-0006).
 - **Fail open**: on an error, stop and clear annotations; never retry (ADR-0010).
+- **Never reload on our own**: a long feed gets a notice; only the user's click reloads (ADR-0015).
 - **The network rule** stays one static, opt-in ruleset that only the service worker
   toggles (ADR-0005).
 - **Every string in English and Italian**, added to both in the same change (ADR-0012).

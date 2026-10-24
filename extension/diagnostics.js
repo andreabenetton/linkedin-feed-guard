@@ -16,7 +16,7 @@
       'feedRoles', 'articleRoles', 'frames']) selectors[key] = count(source.selectors?.[key]);
     // `version` is this UI's; `contentVersion` is the page script's own, which
     // differs when the tab still runs a script from before an update or reload.
-    const report = {schema: 1, version: globalThis.LLGuardConfig.VERSION};
+    const report = {schema: 2, version: globalThis.LLGuardConfig.VERSION};
     if (release(source.version)) report.contentVersion = source.version;
     return Object.assign(report, {
       pageCategory: pick(source.pageCategory, ['main-feed', 'other'], 'other'),
@@ -28,6 +28,10 @@
       posts: count(source.posts), deferred: count(source.deferred),
       videos: count(source.videos), paused: count(source.paused),
       variants: groups, selectors,
+      // Heap in use, in 50 MB buckets, or null where the browser does not report it.
+      heapMB: Number.isSafeInteger(source.heapMB) && source.heapMB >= 0
+        ? Math.min(100000, Math.round(source.heapMB / 50) * 50) : null,
+      pressure: source.pressure === true,
       errorCode: source.errorCode === 'local-optimization-stopped' ? 'local-optimization-stopped' : null,
     });
   }

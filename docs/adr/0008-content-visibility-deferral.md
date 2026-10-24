@@ -34,3 +34,4 @@ Defer rendering of **eligible distant cards** (outside a 1200 px IntersectionObs
 ## Amendments
 
 - 2026-10-19 (0.3.0): a hidden input no longer excludes a card; it holds no user input.
+- 2026-10-24 (0.4.0): the memory this decision cannot release is addressed by advising a user-initiated reload (ADR-0015), not by removing nodes.

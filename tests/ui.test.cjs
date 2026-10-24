@@ -103,3 +103,23 @@ test('English and Italian translation catalogs have matching keys', () => {
   const encoded=source.slice(source.indexOf('const STRINGS = ')+16,source.indexOf(';\nconst KEY'));
   const values=JSON.parse(encoded);assert.deepEqual(Object.keys(values.en).sort(),Object.keys(values.it).sort());
 });
+test('diagnostics schema 2 carries heap memory in 50 MB buckets and a pressure flag only', () => {
+  const sanitize=harness().context.LLGuardDiagnostics.sanitize;
+  const report=sanitize({heapMB:837,pressure:true});
+  assert.equal(report.schema,2);assert.equal(report.heapMB,850);assert.equal(report.pressure,true);
+  for(const bad of [-1,1.5,'800',NaN,null,undefined,{}])assert.equal(sanitize({heapMB:bad}).heapMB,null,String(bad));
+  assert.equal(sanitize({pressure:'true'}).pressure,false);
+});
+test('the long-feed advisory has the same English and Italian keys and never parses markup', () => {
+  const listeners=[];
+  const context=vm.createContext({navigator:{language:'it-IT'},chrome:{i18n:{getUILanguage:()=>'it-IT'},
+    storage:{local:{get:async()=>({})},onChanged:{addListener:fn=>listeners.push(fn)}}}});
+  vm.runInContext(fs.readFileSync(path.join(EXT,'advisory.js'),'utf8'),context);
+  const {STRINGS,locale}=context.LLGuardAdvisory;
+  assert.deepEqual(Object.keys(STRINGS.en).sort(),Object.keys(STRINGS.it).sort());
+  assert.equal(locale(),'it');
+  for(const cb of listeners)cb({feedGuardLanguageV1:{newValue:'en'}},'local');
+  assert.equal(locale(),'en');
+  const source=fs.readFileSync(path.join(EXT,'advisory.js'),'utf8');
+  assert.equal(/innerHTML|insertAdjacentHTML|outerHTML/.test(source),false);
+});

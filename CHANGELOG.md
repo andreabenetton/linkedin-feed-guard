@@ -12,6 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-24
+
+### Added
+
+- **Long-feed memory warning** (ADR-0015), on by default. LinkedIn's feed only grows,
+  and a tab that runs out of memory shows "Aw, Snap!"; only a reload frees it. When the
+  feed reaches 200 detected posts, or the browser reports 1200 MB (or half the limit)
+  of JavaScript memory in use, a small notice in the corner of the page offers
+  **Reload feed** or **Later**. The extension never reloads by itself.
+- The popup shows the **JavaScript memory** the page uses, and when the feed is heavy,
+  a warning at the top with a **Reload feed** button.
+- Diagnostics schema 2: `heapMB` (50 MB steps) and `pressure`.
+
+### Changed
+
+- **Less work while LinkedIn animates.** Once posts are found, class changes are
+  watched inside the feed only; LinkedIn toggles classes all over the page, and those
+  outside the feed used to trigger root rescans.
+- A feed root first found through a video's `play` event is scanned in full at once,
+  not only around that video.
+
 ## [0.3.0] - 2026-10-19
 
 ### Changed
@@ -84,6 +105,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Provide standalone English README, architecture and validation documentation.
 - Expand fixture coverage for modern layouts, hydration, diagnostics and languages.
 
-[Unreleased]: https://github.com/andreabenetton/linkedin-feed-guard/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/andreabenetton/linkedin-feed-guard/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/andreabenetton/linkedin-feed-guard/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/andreabenetton/linkedin-feed-guard/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/andreabenetton/linkedin-feed-guard/releases/tag/v0.2.0
