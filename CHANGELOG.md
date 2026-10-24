@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The popup shows the **JavaScript memory** the page uses, and when the feed is heavy,
   a warning at the top with a **Reload feed** button.
 - Diagnostics schema 2: `heapMB` (50 MB steps) and `pressure`.
+- The heap counts towards the warning only from 30 posts: just after a reload, the
+  previous page's memory is still reported until it is collected (seen in a field
+  test: 1.5 GB with 2 posts for about 40 seconds).
 
 ### Changed
 

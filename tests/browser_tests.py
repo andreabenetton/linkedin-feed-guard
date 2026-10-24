@@ -77,6 +77,11 @@ STUB = r'''
  // Counts full root selections (Selectors.findRoot) by their one ROOTS query.
  const qsa=Document.prototype.querySelectorAll;T.rootScans=0;
  Document.prototype.querySelectorAll=function(selector){if(selector===ROOTS_SELECTOR)T.rootScans++;return qsa.call(this,selector);};
+ // A reported JS heap, in MB, or null for the browser's own.
+ const nativeMemory=Object.getOwnPropertyDescriptor(Performance.prototype,'memory');T.heapMB=null;
+ Object.defineProperty(performance,'memory',{configurable:true,get(){
+  if(T.heapMB===null)return nativeMemory?nativeMemory.get.call(performance):undefined;
+  return {usedJSHeapSize:T.heapMB*1048576,totalJSHeapSize:T.heapMB*1048576,jsHeapSizeLimit:4096*1048576};}});
  // Counts MutationObserver records the content script receives.
  const NativeMO=MutationObserver;T.records=0;
  globalThis.MutationObserver=class extends NativeMO{constructor(cb){super((records,observer)=>{T.records+=records.length;cb(records,observer);});}};
@@ -451,6 +456,22 @@ with sync_playwright() as p:
             f.evaluate('__FGTEST__.orphan()')
             f.page.evaluate('document.querySelector("main").insertAdjacentHTML("beforeend","<div class=occludable-update>x</div>")');f.wait()
             assert f.page.locator(ADVISORY).count()==0
+    def advisory_heap():
+        # Just after a reload: few posts, and the old page's heap not yet collected.
+        with Fixture(browser,content='<main>'+cards(10)+'</main>') as f:
+            f.evaluate('__FGTEST__.heapMB=1500')
+            f.patch(memoryAdvisory=True)
+            f.page.evaluate('document.querySelector("main").insertAdjacentHTML("beforeend","<div class=occludable-update>x</div>")');f.wait()
+            assert f.status()['pressure'] is False,f.status()
+            assert f.page.locator(ADVISORY).count()==0
+        # A real feed of 40 posts with a heavy heap: warned by memory, not by count.
+        with Fixture(browser,content='<main>'+cards(40)+'</main>') as f:
+            f.evaluate('__FGTEST__.heapMB=1500')
+            f.patch(memoryAdvisory=True)
+            f.page.evaluate('document.querySelector("main").insertAdjacentHTML("beforeend","<div class=occludable-update>x</div>")');f.wait()
+            assert f.status()['pressure'] is True and f.status()['heapMB']==1500,f.status()
+            assert '1500 MB' in f.page.locator(ADVISORY+' p').first.inner_text()
+    case('The heap counts only once the feed has posts of its own, then warns with the figure',advisory_heap)
     case('The notice follows its setting and the master switch, stays off other pages and leaves with an orphaned script',advisory_settings)
     def class_scope():
         with Fixture(browser) as f:

@@ -221,7 +221,7 @@
   }
   function underPressure(count, sample) {
     if (count >= Limits.posts) return true;
-    if (!sample) return false;
+    if (!sample || count < Limits.heapMinPosts) return false;
     return sample.usedMB >= Limits.heapMB ||
       (sample.limitMB > 0 && sample.usedMB / sample.limitMB >= Limits.heapRatio);
   }

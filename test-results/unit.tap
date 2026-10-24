@@ -2,163 +2,163 @@ TAP version 13
 # Subtest: browser locale selects Italian region variants and falls back to English
 ok 1 - browser locale selects Italian region variants and falls back to English
   ---
-  duration_ms: 8.324305
+  duration_ms: 11.004318
   type: 'test'
   ...
 # Subtest: language override persists separately from optimization settings
 ok 2 - language override persists separately from optimization settings
   ---
-  duration_ms: 1.203698
+  duration_ms: 2.636362
   type: 'test'
   ...
 # Subtest: invalid language preference is normalized, not executed or fetched
 ok 3 - invalid language preference is normalized, not executed or fetched
   ---
-  duration_ms: 1.964063
+  duration_ms: 1.498377
   type: 'test'
   ...
 # Subtest: storage events update an open UI, while unrelated settings events do not change language
 ok 4 - storage events update an open UI, while unrelated settings events do not change language
   ---
-  duration_ms: 1.150811
+  duration_ms: 1.513699
   type: 'test'
   ...
 # Subtest: a failed language write preserves the active preference
 ok 5 - a failed language write preserves the active preference
   ---
-  duration_ms: 1.464472
+  duration_ms: 1.774108
   type: 'test'
   ...
 # Subtest: every HTML translation and ARIA key exists in both languages
 ok 6 - every HTML translation and ARIA key exists in both languages
   ---
-  duration_ms: 2.601225
+  duration_ms: 3.29598
   type: 'test'
   ...
 # Subtest: manifest locale catalogs are complete and satisfy all message references
 ok 7 - manifest locale catalogs are complete and satisfy all message references
   ---
-  duration_ms: 0.568656
+  duration_ms: 0.766666
   type: 'test'
   ...
 # Subtest: diagnostic export strips unknown fields, validates enums and clamps invalid numbers
 ok 8 - diagnostic export strips unknown fields, validates enums and clamps invalid numbers
   ---
-  duration_ms: 1.311921
+  duration_ms: 1.679324
   type: 'test'
   ...
 # Subtest: the version comes from the manifest alone and fills the help strings
 ok 9 - the version comes from the manifest alone and fills the help strings
   ---
-  duration_ms: 8.485445
+  duration_ms: 9.518321
   type: 'test'
   ...
 # Subtest: diagnostics keep the page script version beside the popup version, or drop it
 ok 10 - diagnostics keep the page script version beside the popup version, or drop it
   ---
-  duration_ms: 1.76258
+  duration_ms: 2.051319
   type: 'test'
   ...
 # Subtest: English and Italian translation catalogs have matching keys
 ok 11 - English and Italian translation catalogs have matching keys
   ---
-  duration_ms: 1.176174
+  duration_ms: 1.336662
   type: 'test'
   ...
 # Subtest: diagnostics schema 2 carries heap memory in 50 MB buckets and a pressure flag only
 ok 12 - diagnostics schema 2 carries heap memory in 50 MB buckets and a pressure flag only
   ---
-  duration_ms: 1.253944
+  duration_ms: 1.518902
   type: 'test'
   ...
 # Subtest: the long-feed advisory has the same English and Italian keys and never parses markup
 ok 13 - the long-feed advisory has the same English and Italian keys and never parses markup
   ---
-  duration_ms: 1.470721
+  duration_ms: 1.693452
   type: 'test'
   ...
 # Subtest: configuration is typed, whitelisted, copied and does not accept arbitrary fields
 ok 14 - configuration is typed, whitelisted, copied and does not accept arbitrary fields
   ---
-  duration_ms: 2.849078
+  duration_ms: 2.626408
   type: 'test'
   ...
 # Subtest: defaults keep the experimental network rule off
 ok 15 - defaults keep the experimental network rule off
   ---
-  duration_ms: 2.280692
+  duration_ms: 2.234915
   type: 'test'
   ...
 # Subtest: opt-in enables DNR; master disable removes it
 ok 16 - opt-in enables DNR; master disable removes it
   ---
-  duration_ms: 1.665053
+  duration_ms: 1.563404
   type: 'test'
   ...
 # Subtest: concurrent setting changes do not overwrite one another
 ok 17 - concurrent setting changes do not overwrite one another
   ---
-  duration_ms: 1.576546
+  duration_ms: 1.52403
   type: 'test'
   ...
 # Subtest: invalid settings cannot reach persistent storage or DNR
 ok 18 - invalid settings cannot reach persistent storage or DNR
   ---
-  duration_ms: 1.798267
+  duration_ms: 2.471774
   type: 'test'
   ...
 # Subtest: messages from a page, content script or another extension are rejected
 ok 19 - messages from a page, content script or another extension are rejected
   ---
-  duration_ms: 1.177111
+  duration_ms: 1.032237
   type: 'test'
   ...
 # Subtest: DNR failure does not silently persist a successful opt-in
 ok 20 - DNR failure does not silently persist a successful opt-in
   ---
-  duration_ms: 1.202051
+  duration_ms: 1.102923
   type: 'test'
   ...
 # Subtest: storage failure rolls back previously changed browser rules
 ok 21 - storage failure rolls back previously changed browser rules
   ---
-  duration_ms: 1.000467
+  duration_ms: 0.939704
   type: 'test'
   ...
 # Subtest: a 0.3.0 settings object gains the new advisory default without losing values
 ok 22 - a 0.3.0 settings object gains the new advisory default without losing values
   ---
-  duration_ms: 1.596195
+  duration_ms: 1.394789
   type: 'test'
   ...
 # Subtest: update migration preserves user settings instead of resetting defaults
 ok 23 - update migration preserves user settings instead of resetting defaults
   ---
-  duration_ms: 1.465902
+  duration_ms: 1.396384
   type: 'test'
   ...
 # Subtest: startup reconciles persisted settings with packaged defaults
 ok 24 - startup reconciles persisted settings with packaged defaults
   ---
-  duration_ms: 1.336395
+  duration_ms: 1.361275
   type: 'test'
   ...
 # Subtest: local storage changes are reconciled by the worker
 ok 25 - local storage changes are reconciled by the worker
   ---
-  duration_ms: 1.082002
+  duration_ms: 0.990416
   type: 'test'
   ...
 # Subtest: rule pattern is anchored; does not match app, auth, publish or messages endpoints
 ok 26 - rule pattern is anchored; does not match app, auth, publish or messages endpoints
   ---
-  duration_ms: 0.517601
+  duration_ms: 0.459068
   type: 'test'
   ...
 # Subtest: manifest is narrow, package references exist, and remote/update hooks are absent
 ok 27 - manifest is narrow, package references exist, and remote/update hooks are absent
   ---
-  duration_ms: 0.460076
+  duration_ms: 0.390271
   type: 'test'
   ...
 1..27
@@ -169,4 +169,4 @@ ok 27 - manifest is narrow, package references exist, and remote/update hooks ar
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 174.438088
+# duration_ms 205.887649

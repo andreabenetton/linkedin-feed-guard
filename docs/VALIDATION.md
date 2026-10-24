@@ -22,7 +22,7 @@ logs and UI screenshots. Each release ZIP carries its own SHA-256 checksum.
 
 ## Test results
 
-**78 tests passed: 27 Node unit tests and 51 Chromium browser/UI fixture cases.**
+**79 tests passed: 27 Node unit tests and 52 Chromium browser/UI fixture cases.**
 No failing cases in the final run. See `test-results/unit.tap`,
 `test-results/browser.log` and `test-results/browser-results.json`.
 
@@ -72,7 +72,9 @@ setting, the master switch, an excluded route and an orphaned script keep it awa
 Class-change scoping is covered by counting observer records: class churn beside the
 feed delivers none, while a class that hides the root's ancestor still releases it.
 The popup's heap counter, warning and Reload feed button are covered in both languages.
-Real heap growth on LinkedIn and whether the notice prevents a crash were not measured.
+A field measurement in one authenticated session (heap per post, and what unloading
+media, removing DOM and reloading each release) is recorded in ADR-0015. Whether the
+notice prevents a crash in Brave was not measured.
 
 Detection cases include modern mainFeed without a main element, component-key
 wrappers, empty first main elements, hidden roots, late feed containers, attribute

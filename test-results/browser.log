@@ -24,6 +24,7 @@ PASS An invalidated extension context (disabled/removed/reloaded) stops the left
 PASS A burst of attribute changes above the feed causes a bounded number of root rescans and none off the feed
 PASS Pre-existing custom CSS property is restored, rather than overwriting unrelated page state
 PASS A long feed gets a reload notice outside the feed; only a click reloads, and Later snoozes it
+PASS The heap counts only once the feed has posts of its own, then warns with the figure
 PASS The notice follows its setting and the master switch, stays off other pages and leaves with an orphaned script
 PASS Class changes are watched inside the feed only once cards are known
 PASS Modern mainFeed without a main element detects component-key post wrappers
@@ -49,4 +50,4 @@ PASS A stale content script triggers a localized reload warning rather than a su
 PASS While the page has not answered, the popup says it is checking, in both languages
 PASS A heavy feed shows memory, a localized warning and a Reload feed button in the popup
 PASS Diagnostics report the page script version beside the popup version and mark a mismatch stale
-{"passed": 51, "failed": 0, "browser": "153.0.8010.12", "extensionSha256": "37790d95a11e5f57ec455f9a4a25ac684df84de758f786e911be7f68c396c54a"}
+{"passed": 52, "failed": 0, "browser": "153.0.8010.12", "extensionSha256": "d4c3c9257ae3df34a601952f59c63c3e119b5965f15b5221face7b244c457b10"}

@@ -19,6 +19,9 @@
     posts: 200,          // detected posts in the current feed
     heapMB: 1200,        // JavaScript heap in use, where the browser reports it
     heapRatio: 0.5,      // or this share of the heap limit
+    heapMinPosts: 30,    // the heap counts only from here: after a reload the old
+                         // page's heap lingers until garbage collection (measured:
+                         // 1.5 GB with 2 posts for ~40 s), which is not this feed's
     interval: 5000,      // at most one sample per interval, only when work runs anyway
     snoozePosts: 100,    // "Later" waits for this many more posts...
     snoozeGrowth: 1.25,  // ...or this much more heap
