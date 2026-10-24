@@ -22,7 +22,7 @@ logs and UI screenshots. Each release ZIP carries its own SHA-256 checksum.
 
 ## Test results
 
-**79 tests passed: 27 Node unit tests and 52 Chromium browser/UI fixture cases.**
+**83 tests passed: 28 Node unit tests and 55 Chromium browser/UI fixture cases.**
 No failing cases in the final run. See `test-results/unit.tap`,
 `test-results/browser.log` and `test-results/browser-results.json`.
 
@@ -75,6 +75,12 @@ The popup's heap counter, warning and Reload feed button are covered in both lan
 A field measurement in one authenticated session (heap per post, and what unloading
 media, removing DOM and reloading each release) is recorded in ADR-0015. Whether the
 notice prevents a crash in Brave was not measured.
+
+The toolbar badge (ADR-0016) is covered by a worker unit test and a fixture; the real
+badge drawing in Brave was not observed. Image unloading (ADR-0017) is covered by a
+fixture and was checked live on LinkedIn with an injected build (see ADR-0017). A
+nested scroll container like LinkedIn's `main#workspace` is covered by a fixture that
+fails without `scrollMargin`.
 
 Detection cases include modern mainFeed without a main element, component-key
 wrappers, empty first main elements, hidden roots, late feed containers, attribute

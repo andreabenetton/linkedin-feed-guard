@@ -37,3 +37,4 @@ The extension **makes no network request of its own** and has **no telemetry**. 
 ## Amendments
 
 - 2026-10-24 (0.4.0): diagnostics schema 2 adds the JavaScript heap in use in 50 MB buckets (`heapMB`, or null) and a `pressure` boolean (ADR-0015). Settings are six booleans.
+- 2026-10-24 (0.4.0): diagnostics schema 2 also carries `unloadedImages`, a count. The content script sends the worker two counts for the toolbar badge (ADR-0016). Settings are seven booleans.

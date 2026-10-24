@@ -20,7 +20,13 @@ function harness(initial = {}) {
   const events = {changed: event(), message: event(), install: event(), startup: event()};
   const failures = {store: false, rule: false};
   const warnings = [];
+  const badge = [];
   const chrome = {
+    action: {
+      async setBadgeText(v) {badge.push(['text',v]);},
+      async setBadgeBackgroundColor(v) {badge.push(['bg',v]);},
+      async setBadgeTextColor(v) {badge.push(['fg',v]);},
+    },
     runtime: {id: 'fixture-id', getURL: file => `chrome-extension://fixture-id/${file}`,
       onMessage: events.message, onInstalled: events.install, onStartup: events.startup},
     storage: {onChanged: events.changed, local: {
@@ -58,7 +64,7 @@ function harness(initial = {}) {
       if (!handled) {clearTimeout(timer);resolve(null);}
     });
   }
-  return {context, local, rules, events, failures, warnings, request};
+  return {context, local, rules, events, failures, warnings, request, badge};
 }
 const plain = value => JSON.parse(JSON.stringify(value));
 test('configuration is typed, whitelisted, copied and does not accept arbitrary fields', () => {
@@ -152,4 +158,22 @@ test('manifest is narrow, package references exist, and remote/update hooks are 
   assert.equal(Object.hasOwn(m,'update_url'),false);assert.equal(Object.hasOwn(m,'externally_connectable'),false);
   assert.match(m.content_security_policy.extension_pages,/connect-src 'none'/);
   for (const file of [m.background.service_worker,m.action.default_popup,...m.content_scripts[0].js,...m.content_scripts[0].css,...m.declarative_net_request.rule_resources.map(r=>r.path)]) assert.equal(fs.existsSync(path.join(EXT,file)),true,file);
+});
+test('the toolbar badge shows the tab\'s post count in white on #666, or ! when heavy', async () => {
+  const h=harness();
+  const send=(message,sender)=>{for(const fn of h.events.message.listeners)fn(message,sender,()=>{});};
+  const tab={id:'fixture-id',tab:{id:7},frameId:0,url:'https://www.linkedin.com/feed/'};
+  send({channel:'feed-guard-badge',posts:42,pressure:false},tab);
+  await new Promise(r=>setTimeout(r,0));
+  assert.deepEqual(plain(h.badge),[['bg',{tabId:7,color:'#666666'}],['fg',{tabId:7,color:'#ffffff'}],['text',{tabId:7,text:'42'}]]);
+  for (const [message,text] of [[{posts:1500},'999+'],[{posts:0},''],[{posts:-3},''],[{posts:'12'},''],[{posts:250,pressure:true},'!'],[{posts:250,pressure:'yes'},'250']]) {
+    h.badge.length=0;send({channel:'feed-guard-badge',...message},tab);await new Promise(r=>setTimeout(r,0));
+    assert.deepEqual(plain(h.badge.find(([k])=>k==='text')[1]),{tabId:7,text},JSON.stringify(message));
+  }
+  h.badge.length=0;
+  send({channel:'feed-guard-badge',posts:5},{...tab,frameId:3});
+  send({channel:'feed-guard-badge',posts:5},{...tab,id:'other'});
+  send({channel:'feed-guard-badge',posts:5},{id:'fixture-id',url:'chrome-extension://fixture-id/popup.html'});
+  await new Promise(r=>setTimeout(r,0));
+  assert.equal(h.badge.length,0);
 });

@@ -35,3 +35,4 @@ Defer rendering of **eligible distant cards** (outside a 1200 px IntersectionObs
 
 - 2026-10-19 (0.3.0): a hidden input no longer excludes a card; it holds no user input.
 - 2026-10-24 (0.4.0): the memory this decision cannot release is addressed by advising a user-initiated reload (ADR-0015), not by removing nodes.
+- 2026-10-24 (0.4.0): the 1200 px margin is given as IntersectionObserver `scrollMargin` where supported. LinkedIn scrolls the feed inside `main#workspace`; `rootMargin` only widens the viewport, so inside that container the margin was effectively zero. `scrollMargin` also widens the viewport's own scroller, so it replaces `rootMargin` rather than adding to it.

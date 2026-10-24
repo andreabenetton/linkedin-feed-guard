@@ -84,6 +84,7 @@ not the popup override. Diagnostic JSON uses stable English keys in both languag
 | Pause off-screen videos | On | Pauses videos outside the viewport margin |
 | Pause videos in background | On | Pauses detected videos when the tab is hidden |
 | Long-feed memory warning | On | Offers a reload when the feed grows heavy; never reloads by itself |
+| Unload distant images | **Off** | Experimental: frees images of posts far off screen; restores them on the way back |
 | Experimental network filter | **Off** | One narrow, optional rule for `/li/track` |
 
 Keep the network filter off during initial testing and do not change Brave Shields
@@ -132,6 +133,21 @@ heavy, the same button. The extension never reloads on its own: save drafts firs
 The heap figure is Chromium's coarse `performance.memory`, not the whole tab's memory
 (see ADR-0015).
 
+### Toolbar counter
+
+The icon shows the number of posts in that tab's feed, in the browser's usual badge
+colours (white on `#666`), and `!` when the feed is heavy enough for the reload
+notice. Nothing is shown off the feed or when Feed Guard is off (ADR-0016).
+
+### Unload distant images (experimental)
+
+Off by default. When on, images in posts more than about 3000 px away, whose
+rendering is already deferred, lose their `src`/`srcset`; they get them back about
+1800 px before the post can be seen. The attributes are moved as nodes and never
+read. In a field test this freed roughly a fifth of the heap; it does not replace a
+reload. Videos are untouched. If images go missing, turn it off: all come back at
+once (ADR-0017).
+
 ### Optional network rule
 
 The packaged DNR rule blocks XHR/fetch, beacon, and image requests initiated by
@@ -161,7 +177,7 @@ LinkedIn can serve different layouts, and the selectors may need further changes
 
 ## Privacy and permissions
 
-- Local storage contains only six boolean settings and one language preference.
+- Local storage contains only seven boolean settings and one language preference.
   No `storage.sync`, content archive, URL history, or diagnostic log is used.
 - Per-tab counters exist only in memory. Diagnostics are generated on request and
   contain the popup's and the page script's versions, fixed status values, the

@@ -32,6 +32,7 @@
       heapMB: Number.isSafeInteger(source.heapMB) && source.heapMB >= 0
         ? Math.min(100000, Math.round(source.heapMB / 50) * 50) : null,
       pressure: source.pressure === true,
+      unloadedImages: count(source.unloadedImages),
       errorCode: source.errorCode === 'local-optimization-stopped' ? 'local-optimization-stopped' : null,
     });
   }

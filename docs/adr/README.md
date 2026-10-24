@@ -28,3 +28,5 @@ Status values: **Proposed**, **Accepted**, **Superseded by NNNN**, **Deprecated*
 | [0013](0013-testing-strategy.md) | Testing — Node vm unit tests and Chromium fixtures; no live-site tests | Accepted |
 | [0014](0014-versioning-semver.md) | Versioning — SemVer, Keep a Changelog, tagged releases | Accepted |
 | [0015](0015-long-feed-memory-advisory.md) | Memory — advise a reload of a long feed; never reload on our own | Accepted |
+| [0016](0016-toolbar-badge.md) | Toolbar — the browser's own badge shows the post count | Accepted |
+| [0017](0017-unload-far-images.md) | Images — opt-in unloading of far images, attributes moved unread | Accepted (experimental) |

@@ -1,271 +1,286 @@
 {
-  "utc": "2026-10-24T14:50:17.692322+00:00",
+  "utc": "2026-10-24T15:41:46.650918+00:00",
   "browser": "153.0.8010.12",
-  "extensionSha256": "d4c3c9257ae3df34a601952f59c63c3e119b5965f15b5221face7b244c457b10",
+  "extensionSha256": "93b9f301c4bf74f109058ce092ae757c31ec65689c91591852937c4f36b1e8da",
   "extensionSha256Method": "sha256 of a sha256sum listing of every file under extension/, paths relative to it and sorted bytewise; from the repository root: cd extension && find . -type f -printf '%P\\n' | LC_ALL=C sort | xargs sha256sum | sha256sum",
   "method": "Actual Chromium DOM/media/IntersectionObserver in an isolated JavaScript world; extension runtime/storage APIs and URL/navigation are simulated. Pages are about:blank fixtures: no navigation or policy override. No installed extension, no LinkedIn login, no DNR browser-engine test. Hidden/PiP/fullscreen/BFCache states simulated.",
-  "passed": 52,
+  "passed": 55,
   "failed": 0,
   "tests": [
     {
       "name": "All posts/Promoted text retained, nested cards deduplicated, native network APIs unchanged",
       "passed": true,
-      "duration_ms": 642.6
+      "duration_ms": 668.9
     },
     {
       "name": "Only far-away cards receive actual content-visibility:auto; browser find can find their text",
       "passed": true,
-      "duration_ms": 628.7
+      "duration_ms": 646.0
     },
     {
       "name": "Textareas, rich editors and newly typed drafts remain intact and uncontained",
       "passed": true,
-      "duration_ms": 1026.1
+      "duration_ms": 979.3
     },
     {
       "name": "A card whose only input is hidden is still deferred; a visible input still excludes it",
       "passed": true,
-      "duration_ms": 648.7
+      "duration_ms": 647.4
     },
     {
       "name": "Live option toggles and master switch restore attributes/CSS without a reload",
       "passed": true,
-      "duration_ms": 1703.0
+      "duration_ms": 1709.5
     },
     {
       "name": "Scrolling reactivates cards, preserves fixture document height and does not delete old posts",
       "passed": true,
-      "duration_ms": 1017.8
+      "duration_ms": 1007.0
     },
     {
       "name": "Large insertion bursts are handled; references to site-removed cards are released",
       "passed": true,
-      "duration_ms": 1595.4
+      "duration_ms": 1584.5
     },
     {
       "name": "Messaging pages do not receive feed DOM or media interventions",
       "passed": true,
-      "duration_ms": 778.7
+      "duration_ms": 864.9
     },
     {
       "name": "Simulated route/popstate changes restore and reapply without reinjection",
       "passed": true,
-      "duration_ms": 1330.2
+      "duration_ms": 1303.9
     },
     {
       "name": "Late-arriving main/feed containers are discovered",
       "passed": true,
-      "duration_ms": 941.0
+      "duration_ms": 957.0
     },
     {
       "name": "Replacing the main container releases old annotations and tracks only the new feed",
       "passed": true,
-      "duration_ms": 989.1
+      "duration_ms": 959.3
     },
     {
       "name": "Real visible video playback is allowed; source/autoplay/preload/volume stay unchanged",
       "passed": true,
-      "duration_ms": 832.9
+      "duration_ms": 885.6
     },
     {
       "name": "Real offscreen video playback is paused; live disable permits playback",
       "passed": true,
-      "duration_ms": 1487.1
+      "duration_ms": 1493.0
     },
     {
       "name": "Simulated hidden-tab state pauses real video and return does not autoplay",
       "passed": true,
-      "duration_ms": 1111.5
+      "duration_ms": 1054.7
     },
     {
       "name": "Simulated PiP/fullscreen state protects real video; leaving protected state reapplies policy",
       "passed": true,
-      "duration_ms": 1332.1
+      "duration_ms": 1270.9
     },
     {
       "name": "Fixture execution does not read text/input/cookies, request an external resource or expose isolated globals",
       "passed": true,
-      "duration_ms": 574.9
+      "duration_ms": 619.1
     },
     {
       "name": "Resize/reflow maintains fixture height after recomputing deferred-card placeholders",
       "passed": true,
-      "duration_ms": 1706.2
+      "duration_ms": 1675.4
     },
     {
       "name": "Resize events are debounced: one remeasure after the burst settles",
       "passed": true,
-      "duration_ms": 1342.2
+      "duration_ms": 1341.1
     },
     {
       "name": "Simulated pagehide/BFCache pageshow cleans up and reinitializes",
       "passed": true,
-      "duration_ms": 1380.8
+      "duration_ms": 1332.5
     },
     {
       "name": "Interaction attribute changes remove containment before an editor is used",
       "passed": true,
-      "duration_ms": 1374.9
+      "duration_ms": 1363.1
     },
     {
       "name": "Repeated on/off cycles do not duplicate tracked cards or lose DOM nodes",
       "passed": true,
-      "duration_ms": 2794.3
+      "duration_ms": 2780.2
     },
     {
       "name": "Removed feed trees are released even while the simulated tab remains hidden",
       "passed": true,
-      "duration_ms": 1150.9
+      "duration_ms": 1105.9
     },
     {
       "name": "An invalidated extension context (disabled/removed/reloaded) stops the left-over script and clears its annotations",
       "passed": true,
-      "duration_ms": 4383.9
+      "duration_ms": 4245.8
     },
     {
       "name": "A burst of attribute changes above the feed causes a bounded number of root rescans and none off the feed",
       "passed": true,
-      "duration_ms": 6214.3
+      "duration_ms": 6337.6
     },
     {
       "name": "Pre-existing custom CSS property is restored, rather than overwriting unrelated page state",
       "passed": true,
-      "duration_ms": 1354.1
+      "duration_ms": 1319.4
     },
     {
       "name": "A long feed gets a reload notice outside the feed; only a click reloads, and Later snoozes it",
       "passed": true,
-      "duration_ms": 2362.2
+      "duration_ms": 2442.1
     },
     {
       "name": "The heap counts only once the feed has posts of its own, then warns with the figure",
       "passed": true,
-      "duration_ms": 2625.0
+      "duration_ms": 2680.2
+    },
+    {
+      "name": "Inside a scroll container the 1200 px margin still applies (scrollMargin)",
+      "passed": true,
+      "duration_ms": 974.5
+    },
+    {
+      "name": "Opt-in image unloading frees far deferred cards, never reads URLs, and restores exactly",
+      "passed": true,
+      "duration_ms": 5387.7
+    },
+    {
+      "name": "The toolbar badge gets the post count on change only, zero off the feed, and the heavy flag",
+      "passed": true,
+      "duration_ms": 2714.7
     },
     {
       "name": "The notice follows its setting and the master switch, stays off other pages and leaves with an orphaned script",
       "passed": true,
-      "duration_ms": 4242.0
+      "duration_ms": 4379.7
     },
     {
       "name": "Class changes are watched inside the feed only once cards are known",
       "passed": true,
-      "duration_ms": 5961.5
+      "duration_ms": 5955.4
     },
     {
       "name": "Modern mainFeed without a main element detects component-key post wrappers",
       "passed": true,
-      "duration_ms": 589.9
+      "duration_ms": 581.5
     },
     {
       "name": "An empty first main does not hide cards in a later main",
       "passed": true,
-      "duration_ms": 589.0
+      "duration_ms": 625.7
     },
     {
       "name": "Hidden main trees are excluded during root selection",
       "passed": true,
-      "duration_ms": 594.5
+      "duration_ms": 663.0
     },
     {
       "name": "A container with zero supported posts reports unrecognized, not success",
       "passed": true,
-      "duration_ms": 592.5
+      "duration_ms": 617.8
     },
     {
       "name": "List-item fallback requires the known mainFeed and a post-body marker",
       "passed": true,
-      "duration_ms": 613.6
+      "duration_ms": 608.7
     },
     {
       "name": "Nested legacy markers inside modern cards are not double-counted",
       "passed": true,
-      "duration_ms": 631.3
+      "duration_ms": 612.3
     },
     {
       "name": "A late mainFeed outside an empty main is discovered automatically",
       "passed": true,
-      "duration_ms": 988.6
+      "duration_ms": 953.7
     },
     {
       "name": "Adding or removing role during hydration updates detection without new nodes",
       "passed": true,
-      "duration_ms": 1333.7
+      "duration_ms": 1334.0
     },
     {
       "name": "Legacy class-marker hydration and removal also update the card registry",
       "passed": true,
-      "duration_ms": 1402.2
+      "duration_ms": 1380.0
     },
     {
       "name": "A mainFeed identity added later is detected without replacing the root",
       "passed": true,
-      "duration_ms": 1015.8
+      "duration_ms": 975.5
     },
     {
       "name": "Replacing a modern feed with a legacy root releases all old card references",
       "passed": true,
-      "duration_ms": 1048.2
+      "duration_ms": 973.3
     },
     {
       "name": "Modern cards preserve draft editors and cleanly remove optimization annotations",
       "passed": true,
-      "duration_ms": 1333.6
+      "duration_ms": 1306.8
     },
     {
       "name": "Explicit diagnostics use only fixed enums and counts without reading page text or values",
       "passed": true,
-      "duration_ms": 581.7
+      "duration_ms": 610.6
     },
     {
       "name": "Modern markers on an excluded route neither activate optimizations nor scan diagnostics",
       "passed": true,
-      "duration_ms": 596.3
+      "duration_ms": 629.6
     },
     {
       "name": "A generic list-item group containing several post cards is not treated as one post",
       "passed": true,
-      "duration_ms": 675.2
+      "duration_ms": 615.1
     },
     {
       "name": "English/Italian popup, live selector, persistence and narrow-layout screenshots",
       "passed": true,
-      "duration_ms": 1754.7
+      "duration_ms": 1904.2
     },
     {
       "name": "Help is fully translated in both languages and can switch without a reload",
       "passed": true,
-      "duration_ms": 1887.0
+      "duration_ms": 1874.5
     },
     {
       "name": "Zero-post UI, sanitized report, clipboard fallback, translation and report cleanup",
       "passed": true,
-      "duration_ms": 1245.5
+      "duration_ms": 1304.7
     },
     {
       "name": "Stored language overrides browser locale and storage changes refresh open UI",
       "passed": true,
-      "duration_ms": 690.3
+      "duration_ms": 673.7
     },
     {
       "name": "A stale content script triggers a localized reload warning rather than a success message",
       "passed": true,
-      "duration_ms": 806.7
+      "duration_ms": 790.6
     },
     {
       "name": "While the page has not answered, the popup says it is checking, in both languages",
       "passed": true,
-      "duration_ms": 1347.5
+      "duration_ms": 1348.6
     },
     {
       "name": "A heavy feed shows memory, a localized warning and a Reload feed button in the popup",
       "passed": true,
-      "duration_ms": 1776.1
+      "duration_ms": 1696.9
     },
     {
       "name": "Diagnostics report the page script version beside the popup version and mark a mismatch stale",
       "passed": true,
-      "duration_ms": 1808.4
+      "duration_ms": 1881.8
     }
   ]
 }

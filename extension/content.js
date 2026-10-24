@@ -16,6 +16,11 @@
   const DEFER_ATTR = 'data-llg-v1-defer';
   const SIZE_PROP = '--llg-v1-block-size';
   const posts = new Map();
+  // Experimental, opt-in (ADR-0017): images of far, already deferred posts lose their
+  // src/srcset so the browser can drop them. The removed Attr nodes are kept as they
+  // are and put back unread: no URL is ever turned into a string here.
+  const FAR_MARGIN = 3000;
+  const unloaded = new Map();
   const videos = new Map();
   const addedRoots = new Set();
   const dirtyPosts = new Set();
@@ -42,6 +47,10 @@
   let lastSample = -Infinity;
   let heap = null;
   let snooze = null;
+  let pressing = false;
+  // Toolbar badge (ADR-0016): the last {posts, pressure} sent to the worker, so a
+  // message goes only when the number shown would change.
+  let badgeSent = '';
   let failed = false;
   let version = 0;
   let pausedCount = 0;
@@ -71,7 +80,33 @@
       (full && (full === video || full.contains(video)));
   }
   function topPost(node) { return Selectors.topPost(node, main); }
+  function unloadImages(post) {
+    const meta = posts.get(post);
+    if (!meta?.far || !active() || !settings.unloadFarImages || !post.hasAttribute(DEFER_ATTR) ||
+        meta.sensitive || post.matches(':focus-within')) return;
+    for (const node of post.querySelectorAll('img, picture > source')) {
+      if (unloaded.has(node)) continue;
+      const removed = [];
+      // srcset first, so dropping it does not send the browser to src meanwhile.
+      for (const name of ['srcset', 'src']) {
+        const attr = node.getAttributeNode(name);
+        if (attr) { node.removeAttributeNode(attr); removed.push(attr); }
+      }
+      if (removed.length) unloaded.set(node, removed);
+    }
+  }
+  function restoreImages(post) {
+    if (!unloaded.size) return;
+    for (const [node, removed] of unloaded) {
+      if (node.isConnected && !post.contains(node)) continue;
+      // The site may have set its own value meanwhile: that one wins.
+      for (const attr of removed.reverse()) if (!node.hasAttribute(attr.name)) node.setAttributeNode(attr);
+      unloaded.delete(node);
+    }
+  }
   function clearDeferred(post) {
+    // Whatever lets a card render again brings its images back first.
+    restoreImages(post);
     const meta = posts.get(post);
     post.removeAttribute(DEFER_ATTR);
     if (meta && meta.ownSize !== null && post.style.getPropertyValue(SIZE_PROP) === meta.ownSize) {
@@ -105,12 +140,22 @@
       post.style.setProperty(SIZE_PROP, meta.ownSize);
       post.setAttribute(DEFER_ATTR, '');
     }
+    unloadImages(post);
   }
   function refreshPost(post) {
     const meta = posts.get(post);
     if (!meta) return;
     meta.sensitive = post.matches(SENSITIVE_SELECTOR) || Boolean(post.querySelector(SENSITIVE_SELECTOR));
     updatePost(post);
+  }
+  // LinkedIn scrolls the feed inside its own container (main#workspace), not the
+  // window. rootMargin only widens the viewport and a scroll container still clips
+  // at its own edge, so there the margin was lost. scrollMargin widens every scroll
+  // container, the viewport's included (measured in Chromium), so it replaces
+  // rootMargin where supported; adding both would double the window's margin.
+  function margin(px) {
+    return typeof IntersectionObserver === 'function' && 'scrollMargin' in IntersectionObserver.prototype
+      ? {scrollMargin: `${px}px 0px`, threshold: 0} : {rootMargin: `${px}px 0px`, threshold: 0};
   }
   const postObserver = supported ? new IntersectionObserver(entries => {
     if (orphaned()) return;
@@ -124,7 +169,21 @@
       }
       updatePost(entry.target);
     }
-  }, {rootMargin: '1200px 0px', threshold: 0}) : null;
+  }, margin(1200)) : null;
+
+  // Far means beyond FAR_MARGIN, well past the 1200 px rendering margin: images come
+  // back ~1800 px before the card can render, so they have time to load again.
+  const farObserver = supported ? new IntersectionObserver(entries => {
+    if (orphaned()) return;
+    try {
+      for (const entry of entries) {
+        const meta = posts.get(entry.target);
+        if (!meta) continue;
+        meta.far = !entry.isIntersecting;
+        if (meta.far) unloadImages(entry.target); else restoreImages(entry.target);
+      }
+    } catch { failOpen(); }
+  }, margin(FAR_MARGIN)) : null;
 
   function offscreen(video) {
     const box = video.getBoundingClientRect();
@@ -148,7 +207,7 @@
         const meta = videos.get(entry.target);
         if (meta) { meta.near = entry.isIntersecting; maybePause(entry.target, meta.near); }
       }
-    }, {rootMargin: '150px 0px', threshold: 0}) : null;
+    }, margin(150)) : null;
 
   function trackVideo(video) {
     if (!videos.has(video)) {
@@ -159,10 +218,11 @@
   }
   function trackPost(post) {
     if (!posts.has(post)) {
-      posts.set(post, {near: true, height: 0, sensitive: false, ownSize: null,
+      posts.set(post, {near: true, far: false, height: 0, sensitive: false, ownSize: null,
         originalSize: '', originalPriority: ''});
       post.setAttribute(POST_ATTR, '');
       postObserver?.observe(post);
+      farObserver?.observe(post);
     }
     refreshPost(post);
     for (const video of post.querySelectorAll('video')) trackVideo(video);
@@ -177,6 +237,7 @@
     clearDeferred(post);
     post.removeAttribute(POST_ATTR);
     postObserver?.unobserve(post);
+    farObserver?.unobserve(post);
     posts.delete(post);
     dirtyPosts.delete(post);
   }
@@ -184,6 +245,8 @@
     for (const post of posts.keys()) {
       if (!post.isConnected || !main?.contains(post) || topPost(post) !== post) forgetPost(post);
     }
+    // An image the site removed while unloaded: drop its kept attributes with it.
+    for (const node of unloaded.keys()) if (!node.isConnected) unloaded.delete(node);
     for (const video of videos.keys()) {
       if (!video.isConnected || !main?.contains(video) || !topPost(video)) {
         videoObserver?.unobserve(video);
@@ -200,13 +263,15 @@
   }
   function clearManaged() {
     clearWork();
-    postObserver?.disconnect(); videoObserver?.disconnect();
+    postObserver?.disconnect(); videoObserver?.disconnect(); farObserver?.disconnect();
     for (const post of [...posts.keys()]) forgetPost(post);
+    // Anything left (a card that stopped being one) gets its images back too.
+    restoreImages(document.documentElement);
     videos.clear(); main = null;
   }
   function stop() {
     failed = true;
-    clearManaged(); quiet();
+    clearManaged(); quiet(); badge();
     domObserver.disconnect(); observing = null; classScope = null;
   }
   function sampleHeap() {
@@ -227,6 +292,16 @@
   }
   const roundMB = (value, step) => Math.round(value / step) * step;
   function quiet() { Advisory?.hide(); }
+  // Two counts, never page content. Sent on change only; a worker that is asleep
+  // wakes for it. An invalidated context throws, and nothing is left to show then.
+  function badge(count = 0, pressure = false) {
+    const key = `${count}|${pressure}`;
+    if (key === badgeSent) return;
+    badgeSent = key;
+    try {
+      chrome.runtime.sendMessage({channel: 'feed-guard-badge', posts: count, pressure})?.catch?.(() => {});
+    } catch { /* Orphaned script: the badge goes with the extension. */ }
+  }
   function later() {
     snooze = {posts: posts.size, heapMB: heap ? heap.usedMB : null};
     quiet();
@@ -238,12 +313,13 @@
     location.reload();
   }
   function advise() {
-    if (!Advisory || !active() || !settings.memoryAdvisory) { quiet(); return; }
+    if (!Advisory || !active() || !settings.memoryAdvisory) { pressing = false; quiet(); return; }
     const now = performance.now();
     if (now - lastSample < Limits.interval) return;
     lastSample = now; heap = sampleHeap();
     const count = posts.size;
-    if (!underPressure(count, heap)) { quiet(); return; }
+    pressing = underPressure(count, heap);
+    if (!pressing) { quiet(); return; }
     if (snooze && count < snooze.posts + Limits.snoozePosts &&
         !(heap && snooze.heapMB && heap.usedMB >= snooze.heapMB * Limits.snoozeGrowth)) return;
     snooze = null;
@@ -272,7 +348,7 @@
     timer = null;
     if (orphaned()) return;
     try {
-      if (!active()) { clearManaged(); return; }
+      if (!active()) { clearManaged(); badge(); return; }
       if (document.hidden) {
         // Hidden-page work is limited to releasing detached references. Do not
         // scan for new cards, read layout, or retain old detached feed trees.
@@ -291,7 +367,7 @@
         clearManaged(); main = next; needsScan = true;
       }
       // No root: back to watching classes document-wide before waiting for one.
-      if (!main) { addedRoots.clear(); dirtyPosts.clear(); observe(); return; }
+      if (!main) { addedRoots.clear(); dirtyPosts.clear(); observe(); badge(); return; }
       if (needsPrune || needsScan) prune();
       if (needsScan) discover(main);
       else for (const root of addedRoots) { if (root.isConnected) discover(root); }
@@ -299,6 +375,7 @@
       addedRoots.clear(); dirtyPosts.clear(); needsScan = false; needsPrune = false;
       observe();
       advise();
+      badge(posts.size, pressing);
     } catch { failOpen(); }
   }
   function schedule() {
@@ -329,7 +406,7 @@
   }
   function syncRoute() {
     observe();
-    if (!active()) { quiet(); if (main || posts.size) clearManaged(); return; }
+    if (!active()) { quiet(); badge(); if (main || posts.size) clearManaged(); return; }
     rootDirty = true; needsScan = true; schedule();
   }
   const domObserver = new MutationObserver(records => {
@@ -382,9 +459,10 @@
   function configure(value) {
     settings = Config.normalize(value);
     observe();
-    if (!settings.enabled) { clearManaged(); quiet(); return; }
+    if (!settings.enabled) { clearManaged(); quiet(); badge(); return; }
     if (!settings.memoryAdvisory) quiet();
     else lastSample = -Infinity;
+    if (!settings.unloadFarImages) restoreImages(document.documentElement);
     if (active()) {
       for (const post of posts.keys()) updatePost(post);
       for (const [video, meta] of videos) maybePause(video, meta.near);
@@ -411,6 +489,7 @@
       !inFeed() ? 'outside-feed' : !main ? 'waiting' : posts.size ? 'feed' : 'unrecognized',
       supported, posts: posts.size,
       deferred: [...posts.keys()].filter(post => post.hasAttribute(DEFER_ATTR)).length,
+      unloaded: unloaded.size,
       videos: videos.size, paused: pausedCount, root: Selectors.kind(main), variants,
       heapMB: sample ? roundMB(sample.usedMB, 10) : null,
       pressure: Boolean(settings.memoryAdvisory && active() && underPressure(posts.size, sample))};
@@ -437,7 +516,7 @@
         videos: current.videos, paused: current.paused, variants: current.variants,
         // 50 MB buckets: enough to see growth, too coarse to fingerprint anything.
         heapMB: current.heapMB === null ? null : roundMB(current.heapMB, 50),
-        pressure: current.pressure,
+        pressure: current.pressure, unloadedImages: current.unloaded,
         selectors: inFeed() ? Selectors.counts() : {},
         errorCode: failed ? 'local-optimization-stopped' : null,
       }});
@@ -507,6 +586,8 @@
   if (window.navigation) window.navigation.addEventListener('currententrychange', routeChanged);
   window.addEventListener('pagehide', () => {
     pageSuspended = true; observe(); clearManaged(); quiet();
+    // The browser clears a tab's badge when it leaves the page; send it afresh on return.
+    badgeSent = '';
   });
   window.addEventListener('pageshow', event => {
     if (event.persisted && !orphaned()) { pageSuspended = false; void reloadSettings(); }

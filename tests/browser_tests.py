@@ -39,10 +39,14 @@ MEDIA = 'data:video/webm;base64,' + base64.b64encode((ROOT / 'tests/silent.webm'
 ROOTS_SELECTOR = '[data-testid="mainFeed"], main, [role="main"]'  # selectors.js ROOTS
 CSS = '''body{margin:0;background:white}main{width:600px;margin:0 20px}.occludable-update{box-sizing:border-box;min-height:200px;margin:12px 0;padding:15px;border:1px solid #aaa}video{width:160px;height:90px}textarea{width:250px;height:48px}.spacer{height:1500px}'''
 
-def cards(count=40, start=0, video=None, drafts=False):
+PIXEL='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+def cards(count=40, start=0, video=None, drafts=False, images=False):
     output=[]
     for i in range(start,start+count):
         extra=''
+        if images:
+            extra += f'<img id="img-{i}" src="{PIXEL}#{i}" srcset="{PIXEL}#{i}x 1x" width="40" height="40" alt="">'
+            extra += f'<picture><source id="src-{i}" srcset="{PIXEL}#{i}p"><img id="pic-{i}" src="{PIXEL}#{i}q" width="40" height="40" alt=""></picture>'
         if i == video:
             extra += f'<video id="sample-video" src="{MEDIA}" muted loop controls playsinline preload="metadata"></video>'
         if drafts and i in (0,15):
@@ -60,13 +64,14 @@ STUB = r'''
  const changeListeners=[], messageListeners=[];
  let stored=INITIAL;
  const nativeHidden=Object.getOwnPropertyDescriptor(Document.prototype,'hidden').get;
- const T = globalThis.__FGTEST__ = {hidden:null,pip:null,fullscreen:null,readAttempts:0,location:{protocol:'https:',hostname:'www.linkedin.com',pathname:TEST_PATH,reload(){T.reloads++;}},reloads:0};
+ const T = globalThis.__FGTEST__ = {sent:[],hidden:null,pip:null,fullscreen:null,readAttempts:0,location:{protocol:'https:',hostname:'www.linkedin.com',pathname:TEST_PATH,reload(){T.reloads++;}},reloads:0};
  Object.defineProperty(document,'hidden',{configurable:true,get:()=>T.hidden===null?nativeHidden.call(document):T.hidden});
  Object.defineProperty(document,'pictureInPictureElement',{configurable:true,get:()=>T.pip?document.getElementById(T.pip):null});
  Object.defineProperty(document,'fullscreenElement',{configurable:true,get:()=>T.fullscreen?document.getElementById(T.fullscreen):null});
  globalThis.chrome = {
   storage:{local:{get:async()=>({feedGuardSettingsV1:stored})}, onChanged:{addListener:fn=>changeListeners.push(fn)}},
-  runtime:{id:'fixture-id',getManifest:()=>({version:MANIFEST_VERSION}),onMessage:{addListener:fn=>messageListeners.push(fn)}}
+  runtime:{id:'fixture-id',getManifest:()=>({version:MANIFEST_VERSION}),onMessage:{addListener:fn=>messageListeners.push(fn)},
+   sendMessage:async message=>{T.sent.push(JSON.parse(JSON.stringify(message)));}}
  };
  T.patch = patch => {
   const oldValue=stored;stored={...stored,...patch};
@@ -472,6 +477,82 @@ with sync_playwright() as p:
             assert f.status()['pressure'] is True and f.status()['heapMB']==1500,f.status()
             assert '1500 MB' in f.page.locator(ADVISORY+' p').first.inner_text()
     case('The heap counts only once the feed has posts of its own, then warns with the figure',advisory_heap)
+    def nested_scroller():
+        # LinkedIn's layout: the feed scrolls inside main#workspace, not the window.
+        content='<main id="workspace" style="height:800px;overflow-y:auto">'+cards()+'</main>'
+        with Fixture(browser,content=content) as f:
+            f.page.add_style_tag(content='body{overflow:hidden}')
+            f.page.evaluate('document.getElementById("workspace").scrollTop=0');f.wait()
+            # Card 5 starts about 1150 px down: off screen but inside the 1200 px margin.
+            top=f.page.locator('#post-5').evaluate('e=>e.getBoundingClientRect().top')
+            assert 800<top<2000,top
+            assert f.page.locator('#post-5').get_attribute('data-llg-v1-defer') is None
+            assert f.page.locator('#post-39').get_attribute('data-llg-v1-defer')==''
+    case('Inside a scroll container the 1200 px margin still applies (scrollMargin)',nested_scroller)
+    def unload_images():
+        ATTRS='e=>[e.getAttribute("src"),e.getAttribute("srcset")]'
+        with Fixture(browser,content='<main>'+cards(images=True)+'</main>') as f:
+            # Off by default: nothing is touched.
+            assert f.page.locator('img:not([src])').count()==0
+            assert f.status()['unloaded']==0
+            original=f.page.locator('#img-39').evaluate(ATTRS)
+            # Attribute values must never be read as text by the extension.
+            f.evaluate('''(()=>{const forbid=()=>{__FGTEST__.readAttempts++;throw new Error('read');};
+              for(const k of ['value','nodeValue'])Object.defineProperty(Attr.prototype,k,{configurable:true,get:forbid});
+              Object.defineProperty(Element.prototype,'getAttribute',{configurable:true,value:forbid});})()''')
+            f.patch(unloadFarImages=True);f.wait(500)
+            assert f.evaluate('__FGTEST__.readAttempts')==0
+            f.evaluate('(()=>{delete Attr.prototype.value;delete Attr.prototype.nodeValue;delete Element.prototype.getAttribute;})()')
+            status=f.status()
+            assert status['unloaded']>0,status
+            # Far, deferred cards lose src and srcset (img and <source>); near ones keep them.
+            assert f.page.locator('#img-39').evaluate(ATTRS)==[None,None]
+            assert f.page.locator('#src-39').evaluate('e=>e.hasAttribute("srcset")') is False
+            assert f.page.locator('#pic-39').evaluate('e=>e.hasAttribute("src")') is False
+            assert f.page.locator('#img-0').evaluate(ATTRS)!=[None,None]
+            assert f.page.locator('#post-39').get_attribute('data-llg-v1-defer')==''
+            assert f.page.locator('img').count()==80
+            # Scrolling back restores them before the card renders, byte for byte.
+            f.page.locator('#post-30').scroll_into_view_if_needed();f.wait(500)
+            assert f.page.locator('#img-39').evaluate(ATTRS)==original
+            assert f.page.locator('#img-39').evaluate('e=>e.complete&&e.naturalWidth===1')
+            f.page.locator('#post-0').scroll_into_view_if_needed();f.wait(500)
+            assert f.page.locator('#img-39').evaluate(ATTRS)==[None,None]
+            # Turning it off restores everything at once.
+            f.patch(unloadFarImages=False)
+            assert f.page.locator('img:not([src])').count()==0
+            assert f.page.locator('source:not([srcset])').count()==0
+            assert f.page.locator('#img-39').evaluate(ATTRS)==original
+            f.patch(unloadFarImages=True);f.wait(300)
+            assert f.page.locator('#img-39').evaluate(ATTRS)==[None,None]
+            f.patch(enabled=False)
+            assert f.page.locator('img:not([src])').count()==0
+        # A value the site sets meanwhile is kept, not overwritten by the old one.
+        with Fixture(browser,content='<main>'+cards(images=True)+'</main>',settings={'unloadFarImages':True}) as f:
+            f.wait(300)
+            f.page.locator('#img-39').evaluate('e=>e.setAttribute("src","data:image/gif;base64,R0lGODlhAQABAAAAACw=")')
+            f.patch(unloadFarImages=False)
+            assert f.page.locator('#img-39').get_attribute('src').startswith('data:image/gif')
+            assert f.page.locator('#img-39').get_attribute('srcset').endswith('#39x 1x')
+    case('Opt-in image unloading frees far deferred cards, never reads URLs, and restores exactly',unload_images)
+    def toolbar_badge():
+        with Fixture(browser) as f:
+            sent=f.evaluate('__FGTEST__.sent')
+            assert sent and sent[-1]=={'channel':'feed-guard-badge','posts':40,'pressure':False},sent
+            # Only on change: a mutation that does not change the count sends nothing.
+            n=len(sent);f.page.locator('#post-3 h2').evaluate('e=>e.setAttribute("aria-expanded","false")');f.wait()
+            assert len(f.evaluate('__FGTEST__.sent'))==n
+            f.navigate('/jobs/')
+            assert f.evaluate('__FGTEST__.sent')[-1]['posts']==0
+            f.navigate('/feed/')
+            assert f.evaluate('__FGTEST__.sent')[-1]['posts']==40
+            f.patch(enabled=False)
+            assert f.evaluate('__FGTEST__.sent')[-1]['posts']==0
+        with Fixture(browser,content='<main>'+cards(210)+'</main>') as f:
+            assert f.evaluate('__FGTEST__.sent')[-1]=={'channel':'feed-guard-badge','posts':210,'pressure':True}
+            text=json.dumps(f.evaluate('__FGTEST__.sent'))
+            for private in ['Synthetic','Promoted','linkedin']:assert private not in text
+    case('The toolbar badge gets the post count on change only, zero off the feed, and the heavy flag',toolbar_badge)
     case('The notice follows its setting and the master switch, stays off other pages and leaves with an orphaned script',advisory_settings)
     def class_scope():
         with Fixture(browser) as f:

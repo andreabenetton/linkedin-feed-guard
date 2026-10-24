@@ -39,7 +39,8 @@ breaking the site the extension runs on, and for code a reviewer can read as it 
   pixel. CI greps for them (ADR-0003). The CSP's `connect-src 'none'` stays.
 - **No page text, attribute values, IDs or URLs** are read into memory beyond what
   structural matching needs, and never into diagnostics (ADR-0003, ADR-0007).
-  Text is set with `textContent`, never `innerHTML`.
+  Text is set with `textContent`, never `innerHTML`. Image sources unloaded by the
+  opt-in option are moved as Attr nodes, never read (ADR-0017).
 - **Never remove or hide a post node**; deferral is `content-visibility` through
   namespaced `data-llg-v1-*` attributes that the master switch removes (ADR-0008).
 - **Video: `pause()` only**, never resume, never touch media settings; PiP and

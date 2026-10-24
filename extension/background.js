@@ -67,6 +67,29 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     .then(respond, error => respond({ok: false, error: ['invalid-settings', 'invalid-option', 'filter-rollback-failed'].includes(error?.message) ? error.message : 'settings-operation-failed'}));
   return true;
 });
+// Toolbar badge (ADR-0016): the post count of the feed in that tab, in the colours
+// of the browser's usual badge (white on #666), or "!" when the feed is heavy.
+const BADGE = Object.freeze({background: '#666666', text: '#ffffff', max: 999});
+function badgeText(posts, pressure) {
+  if (pressure) return '!';
+  if (!posts) return '';
+  return posts > BADGE.max ? `${BADGE.max}+` : String(posts);
+}
+chrome.runtime.onMessage.addListener((message, sender) => {
+  // Only our own content script, in a tab's top frame; two typed fields, nothing else.
+  if (!message || message.channel !== 'feed-guard-badge' || sender.id !== chrome.runtime.id ||
+      !Number.isInteger(sender.tab?.id) || sender.frameId !== 0) return false;
+  const posts = Number.isSafeInteger(message.posts) && message.posts > 0 ? message.posts : 0;
+  const tabId = sender.tab.id;
+  const text = badgeText(posts, message.pressure === true);
+  // Per-tab state: the browser drops it when the tab navigates or closes.
+  Promise.all([
+    chrome.action.setBadgeBackgroundColor({tabId, color: BADGE.background}),
+    chrome.action.setBadgeTextColor ? chrome.action.setBadgeTextColor({tabId, color: BADGE.text}) : null,
+    chrome.action.setBadgeText({tabId, text}),
+  ]).catch(() => { /* The tab closed meanwhile. */ });
+  return false;
+});
 chrome.runtime.onInstalled.addListener(() => {
   // Normalize/migrate without overwriting existing preferences on updates.
   serial(async () => {

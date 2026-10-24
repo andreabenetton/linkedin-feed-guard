@@ -11,6 +11,7 @@
     pauseHiddenVideos: true,
     blockTracking: false,
     memoryAdvisory: true,
+    unloadFarImages: false,
   });
   // Long-feed memory advisory (ADR-0015). A feed that keeps growing is the usual
   // road to an out-of-memory "Aw, Snap!": the only thing that frees it is a reload,

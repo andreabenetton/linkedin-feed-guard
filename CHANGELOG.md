@@ -28,8 +28,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   previous page's memory is still reported until it is collected (seen in a field
   test: 1.5 GB with 2 posts for about 40 seconds).
 
+- **A post counter on the toolbar icon** (ADR-0016), in the browser's usual badge
+  colours (white on grey `#666`), like other extensions' counters. It shows the posts
+  in the feed of that tab, and `!` when the feed is heavy. The drawn orange pause
+  badge is gone from the icon.
+- **Unload distant images** (ADR-0017), experimental and **off by default**: images of
+  posts more than about 3000 px away lose their source so the browser can free them,
+  and get it back well before you scroll to them. Image addresses are moved, never
+  read. Videos are not touched.
+
 ### Changed
 
+- **The 1200 px rendering margin now works on LinkedIn's current layout.** The feed
+  scrolls inside its own container, where the margin was ignored and posts were
+  deferred as soon as they left the screen; it is now applied with `scrollMargin`.
 - **Less work while LinkedIn animates.** Once posts are found, class changes are
   watched inside the feed only; LinkedIn toggles classes all over the page, and those
   outside the feed used to trigger root rescans.

@@ -9,7 +9,7 @@ dependencies. The runtime directory is `extension/`.
 
 ## Components
 
-`config.js` validates the six boolean preferences, holds the long-feed thresholds and reads the release version
+`config.js` validates the seven boolean preferences, holds the long-feed thresholds and reads the release version
 from the manifest, its only source. `background.js` serializes settings changes,
 reconciles the packaged DNR ruleset, and rolls back rules if a storage write fails.
 Its settings message channel answers only the extension's own pages, not content
@@ -47,6 +47,13 @@ seconds, during a flush that runs anyway, it compares the post count and Chromiu
 While the feed has posts, `content.js` watches `class` changes inside the feed root
 only; other identity attributes are still watched document-wide.
 
+IntersectionObservers use `scrollMargin` where supported, because LinkedIn scrolls
+the feed inside `main#workspace` and `rootMargin` does not reach into a scroll
+container. A third observer (3000 px) marks far cards for the opt-in image unloading
+of ADR-0017, which moves `src`/`srcset` Attr nodes off and back without reading them.
+After each flush `content.js` sends the post count and the heavy flag to the worker
+when they change; the worker draws the tab's toolbar badge (ADR-0016).
+
 `i18n.js` contains complete English and Italian dictionaries and the local
 `feedGuardLanguageV1` preference (`auto`, `en`, or `it`). It is loaded only in
 extension UI pages, not in the LinkedIn content script or service worker. The
@@ -63,12 +70,13 @@ uses clipboard access only on a user click, with manual selection as fallback.
 ## Storage
 
 `feedGuardSettingsV1`: six booleans (`enabled`, `renderOffscreen`,
-`pauseOffscreenVideos`, `pauseHiddenVideos`, `blockTracking`, `memoryAdvisory`).
+`pauseOffscreenVideos`, `pauseHiddenVideos`, `blockTracking`, `memoryAdvisory`,
+`unloadFarImages`).
 
 `feedGuardLanguageV1`: one enum, `auto`, `en`, or `it`.
 
 Counts and generated reports are not persisted. No Sync storage is used. Changing
-the language does not rewrite the six optimization preferences.
+the language does not rewrite the seven optimization preferences.
 
 ## Diagnostics, schema 2
 
@@ -90,6 +98,7 @@ The report contains only these fields:
   10,000 on export; arbitrary selectors and arbitrary attribute values are never
   exported. On excluded routes the content script does not run the diagnostic
   selector scan; the popup's fixed schema fills unused categories with zeros.
+- `unloadedImages`: images whose sources are currently unloaded (ADR-0017).
 - `heapMB`: JavaScript heap in use in 50 MB buckets, or null where the browser does
   not report it. `pressure`: whether the long-feed notice's threshold is met.
 - `errorCode`: null or the fixed `local-optimization-stopped` code.
